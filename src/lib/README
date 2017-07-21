@@ -1,0 +1,30 @@
+This is a collection of library functions which support the 
+gadgets.  They were pulled from VFd, and some are extensions 
+to already open-sourced software.  See the LICENSE file for 
+all of the applicable licenses and references.
+
+
+Dependencies
+This library depends on git being installed as it clones and 
+bulds a basic json parsing library (jsmn) from github.
+
+We also depend on mk (the make uitlity origianally written
+for Plan-9). It can be pulled and built as a tool from the 
+Ningaui opensource repo: https://github.com/att/ningaui. The
+Makefile might work; feel free to keep it up to date if you 
+prefer make/gmake.
+
+Building
+To build:
+	mk jsmn
+	mk
+
+Unit Tests
+There are several unit tests which can be built and executed.
+Each test builds a stand-alone binary which will test the 
+related library module.
+
+
+Caution:
+The jsmn library is cloned and compiled in place; pleas do NOT 
+check it into this repo. 

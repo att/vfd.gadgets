@@ -1,0 +1,69 @@
+# mk is better (see plan-9)
+# :vi ts=4 sw=4 noext:
+
+MKSHELL = ksh
+
+jsmn_lib = -L jsmn -ljsmn
+cc = gcc
+cflags = -I jsmn -g
+
+binaries = jwrapper_test bleat_test
+
+%.o: %.c
+	$cc $cflags -c $prereq
+
+all:V: libgadget.a
+
+
+lib = libgadget.a
+lib_src = jwrapper symtab bleat list_files
+
+$lib(%.o):N:    %.o
+$lib:   ${lib_src:%=$lib(%.o)}
+    ksh '(
+    set -e
+    names="${newprereq//$lib\(}"					# pluck off lib.*( from each in newprereq
+    ar r $lib ${names//\)/} && rm ${names//\)/}	# archive and remove after ditching trailing ) from each name
+    ranlib $lib ||true
+    )'
+
+
+# --------- tests ----------------------------------------------------
+jwrapper_test:: jwrapper_test.c vfdlib.h jwrapper.o symtab.o
+	$cc $cflags jwrapper_test.c  -o jwrapper_test jwrapper.o symtab.o $jsmn_lib
+
+jwrapper_test2:: jwrapper_test2.c vfdlib.h jwrapper.o symtab.o
+	$cc $cflags jwrapper_test2.c  -o jwrapper_test2 jwrapper.o symtab.o $jsmn_lib
+
+bleat_test::	bleat_test.c $lib
+	$cc $cflags bleat_test.c -o bleat_test -L. -lgadget $jsmn_lib
+
+list_test::	list_test.c $lib
+	$cc $cflags list_test.c -o list_test -L. -lgadget $jsmn_lib
+
+old_list_test::	old_list_test.c $lib
+	$cc $cflags old_list_test.c -o old_list_test -L. -lgadget $jsmn_lib
+
+pfx_list_test::	pfx_list_test.c $lib
+	$cc $cflags pfx_list_test.c -o pfx_list_test -L. -lgadget $jsmn_lib
+
+
+
+all_tests:V:	jwrapper_test jwrapper_test2 bleat_test
+
+test:V:
+	ksh jwrapper_test.ksh
+
+nuke:V:
+	rm -f *.o *.a $binaries
+
+
+# ------ clone (if needed) and update and build jsmn -------
+jsmn:V:
+	if [[ ! -d jsmn ]]
+	then
+		git clone https://github.com/zserge/jsmn
+	fi
+	cd jsmn
+	git pull
+	make
