@@ -1,0 +1,59 @@
+.if false
+	Source to generate the readme in one of various forms using {X}fm:
+		MARKDOWN=1 tfm README.xfm README.md
+		pfm README.xfm README.ps
+		hfm README.xfm README.html
+
+	or use mk_readme.ksh to generate them all. 
+
+	DO NOT modify the README.md/.ps files manually; change the source and
+	rebuild!!
+
+.fi
+
+.** install xfm and ensure env variable XFM_LIB points to the library directory where templates live
+.** HOME/lib is a good place for them if you've installed in your own environment and not in a system
+.** library.
+.gv e XFM_LIB lib
+.if !lib
+	.gv e HOME home
+	.dv lib &{home}/lib
+.fi
+
+.** get specialised macros based on output format; might override defs above
+.im &{lib}/markdown.im
+.if ! super
+	.dv msg ###ERROR### markdown.im seems to be missing or incomplete
+	.sv msg
+	.qu
+.fi
+
+
+
+&h1(Gobbler)
+Gobbler is a DPDK application which provides a simple packet receipt counting
+funciton with optional forwarding or return to sender modes.
+Gobbler opens one or more devices for input (Rx)
+and either duplicates the Rx devices for Tx, or opens one or more devices 
+for transmission (Tx). 
+Pakcets received are counted and dropped, or forwarded onto one of the Tx 
+devices.
+.sp 1
+
+&h2(Requirements)
+Version 17.08 of DPDK should be used to build gobbler. 
+
+&h2(Building)
+Gobbler is built in the same manner as any other DPDK appliction; using gmake.
+Execute the following command in this directory which will generate ./build/app/gobbler
+as a statically linked binary.
+
+.sp .5
+.nf
+   make clean; make
+.fo
+
+.ln
+.gv Date
+.gv version
+Formatted on &_date using &_ver
