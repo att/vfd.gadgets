@@ -57,9 +57,10 @@ static char* get_nxt( int argc, char** argv, int* pidx ) {
 			-inc /path/cfgfile
 			-i -c /path/cfgfile -n
 			-ni -c /path/cfg
+
+	The cfg_fname parm is the default filename used if -c is not supplied. 
 */
-extern config_t* crack_args( int argc, char** argv ) {
-	char*	cfg_fname = NULL;
+extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 	config_t*	cfg;
 	int		async = 1;			// -i keeps this interactive and attached to the tty
 	int		forreal = 1;		// -n sets this to 0 preventing destructive things
@@ -69,9 +70,6 @@ extern config_t* crack_args( int argc, char** argv ) {
 	int		flags;
 	int		dump_size = 0;
 	
-
-	cfg_fname = strdup( "/etc/switchboard/anolis.cfg" );			// default config if -c missing
-
 	// we pull config from a file, not command line, so parse just the minimal things that 
 	// need to come from the command line. We'll build a 'dpdk parsable' argv/argc later 
 	// and pretend we got it from the command line.
@@ -113,7 +111,6 @@ extern config_t* crack_args( int argc, char** argv ) {
 			}
 		}
 	}
-
 
 	cfg = read_config( cfg_fname );
 	if( cfg == NULL ) {

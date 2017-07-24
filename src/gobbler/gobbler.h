@@ -114,6 +114,16 @@ typedef struct if_stats {
 	int64_t cadds;
 } if_stats_t;
 
+
+/*
+	Manages a set of VLAN IDs that we rotate through when we Tx on a device
+*/
+typedef struct vlan_set {
+	uint16_t*	vlans;			// the array of IDs we loop through
+	uint32_t	idx;			// index into the array
+	uint32_t	nvlans;			// number in the list
+} vlan_set_t;
+
 /*
 	Describes an interface (pci we assume) and maps it to a port in dpdk terms.
 */
@@ -127,6 +137,7 @@ typedef struct iface {
 	int nrxq;
 	int	ntxdesc;							// number of descriptors to allocate
 	int nrxdesc;
+	vlan_set_t	*vset;						// a list of VLAN IDs that are rotated through when Txing to this dev
 	uint64_t last_clock;					// clock value of last flush
 	struct ether_addr gate;					// router/gateway mac address to send routable packets to on this interface
 	struct ether_addr mac_addr;				// the mac address of this port in dpdk form
@@ -148,7 +159,8 @@ typedef struct config {
 	int		nrx_devs;				// number in each array
 	int		ntx_devs;
 	int*	rx_ports;				// port numbers corresponding to the rx_devs names
-	int*	tx_ports;				// tx numbers
+	int*	tx_ports;				// tx port numbers
+	vlan_set_t** vlans;				// vlans per tx dev (order matches tx_ports order)
 
 	char*	log_dir;
 	char*	log_file;				// fully qualified log file name to give to bleat
@@ -215,7 +227,7 @@ typedef struct context {
 
 
 //---- config things ------------------------------------------------------
-extern config_t* crack_args( int argc, char** argv );
+extern config_t* crack_args( int argc, char** argv, char const* def_fname );
 extern void free_config( config_t* config );
 extern config_t* read_config( char const* fname );
 

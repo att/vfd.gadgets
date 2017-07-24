@@ -1,5 +1,5 @@
-/*
-	Mneminic:	config_test.c
+		/*
+		Mneminic:	config_test.c
 	Abstract: 	Unit test for config.c module.
 				Tests obvious things, may miss edge cases.
 	Date:		07 May 2017
@@ -26,15 +26,32 @@
 
 static void print_cfg( config_t* cfg ) {
 	int i;
+	int j;
+	vlan_set_t* vs;
 
 	fprintf( stderr, "\t rx_devs: [ " );
 	for( i = 0; i < cfg->nrx_devs; i++ ) {
 		fprintf( stderr, " \"%s\" ",	cfg->rx_devs[i] );				
 	}
 	fprintf( stderr, " ]\n" );
+
 	fprintf( stderr, "\t tx_devs: [ " );
 	for( i = 0; i < cfg->ntx_devs; i++ ) {
 		fprintf( stderr, " \"%s\" ",	cfg->tx_devs[i] );				
+	}
+	fprintf( stderr, " ]\n" );
+
+	fprintf( stderr, "\t tx vlan sets: [ " );
+	for( i = 0; i < cfg->ntx_devs; i++ ) {
+		if( (vs = cfg->vlans[i] ) != NULL ) {
+			fprintf( stderr, " [ " );
+			for( j = 0; j < vs->nvlans; j++ ) {
+				fprintf( stderr, " %d",	vs->vlans[j] );				
+			}
+			fprintf( stderr, " ] " );
+		} else {
+			fprintf( stderr, " [ ] " );
+		}
 	}
 	fprintf( stderr, " ]\n" );
 
@@ -79,7 +96,7 @@ int main( int argc, char** argv ) {
 		);
 	}
 
-	cfg = crack_args( argc, argv );
+	cfg = crack_args( argc, argv, fname );		// open file, fname if -c not supplied
 	if( cfg == NULL ) {
 		fprintf( stderr, "[FAIL] unable to read and/or parse config file %s: %s\n", fname, strerror( errno ) );
 		rc = 1;
