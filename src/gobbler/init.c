@@ -152,8 +152,11 @@ extern int initialise_dpdk( config_t* cfg ) {
 	for( i = 0; i < cfg->nrx_devs; i++ ) {
 		insert_pair( argv, &argc, ARGV_LEN, "-w", cfg->rx_devs[i] );
 	}
-	for( i = 0; i < cfg->ntx_devs; i++ ) {
-		insert_pair( argv, &argc, ARGV_LEN, "-w", cfg->tx_devs[i] );
+
+	if( !cfg->duprx2tx ) {														// tx devices are added only if not duplicated from rx list
+		for( i = 0; i < cfg->ntx_devs; i++ ) {
+			insert_pair( argv, &argc, ARGV_LEN, "-w", cfg->tx_devs[i] );
+		}
 	}
 
 	if( cfg->log_level + cfg->init_lldelta > 2 ) {
@@ -363,7 +366,7 @@ extern context_t* mk_context( config_t* cfg ) {
 	}
 
 	ok = 0;
-	for( i = 0; i < cfg->nports; i++ ) {				// try to map each rx device to a port
+	for( i = 0; i < cfg->nports; i++ ) {				// try to map each rx device to a port listed by hardware
 		ok += map_port( cfg, i, 1 );
 	}
 	if( ok != cfg->nrx_devs ) {
@@ -373,8 +376,21 @@ extern context_t* mk_context( config_t* cfg ) {
 	}
 
 	ok = 0;
-	for( i = 0; i < cfg->nports; i++ ) {				// try to map each tx device to a port
-		ok += map_port( cfg, i, 0 );
+	if( !cfg->duprx2tx ) {							// if not dup rx to tx, then we must actually look
+		for( i = 0; i < cfg->nports; i++ ) {				// try to map each tx device to a port
+			ok += map_port( cfg, i, 0 );
+		}
+	} else {
+		for( i = 0; i < cfg->ntx_devs; i++ ) {
+			if( i < cfg->nrx_devs ) {					// in dup mode, ntx must be <= nrx
+				bleat_printf( 1, "dup rx to tx: tx device [%d] (%s) will be ignored and will map to rx:%s", i, cfg->tx_devs[i], cfg->rx_devs[i] );
+				ok++;
+			} else {
+				bleat_printf( 0, "ERR: when rx dup to tx, number of tx definitions must match number of rx ports and does not" );
+				ok = 0;
+				break;
+			}
+		}
 	}
 	if( ok != cfg->ntx_devs ) {
 		bleat_printf( 0, "CRI: unable to map one or more tx names to a port" );
@@ -392,7 +408,7 @@ extern context_t* mk_context( config_t* cfg ) {
 	}
 	bleat_printf( 1, "all rx interfaces successfully created" );
 
-	if( cfg->ntx_devs > 0 ) {
+	if( ! cfg->duprx2tx && cfg->ntx_devs > 0 ) {
 		for( i = 0; i < cfg->ntx_devs; i++ ) {
 			mb_need += cfg->tx_des + cfg->rx_des;
 			if( (nc->tx_ifs[i] = mk_iface( cfg->tx_ports[i], cfg->rx_des, cfg->tx_des, cfg->hw_vlan_strip, cfg->mtu, cfg->tx_devs[i]  )) == NULL ) { 					// flesh out the intefaces
@@ -400,19 +416,22 @@ extern context_t* mk_context( config_t* cfg ) {
 				free( nc );
 				return NULL;
 			}
+
+			nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured
 		}
 		bleat_printf( 1, "all tx interfaces successfully created" );
 	} else {
 		if( cfg->duprx2tx ) {
 			for( i = 0; i < cfg->nrx_devs; i++ ) {
 				nc->tx_ifs[i] = nc->rx_ifs[i];
+				nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured; we ignore the address
 			}
 			nc->ntxifs = cfg->nrx_devs;
 			bleat_printf( 1, "rx interfaces successfully duplicated on the tx list" );
 			nc->flags |= CTF_TX_DUP;
 		} else {
 			if( nc->xmit_type != DROP ) {			// only warn them if they didn't specify drop
-				bleat_printf( 0, "wrn: xmit type changed to drop because no tx devices were given" );
+				bleat_printf( 0, "wrn: xmit type changed to drop because no tx devices were given and dup was false" );
 				nc->xmit_type = DROP;			// no tx so we must drop
 			}
 		}
@@ -567,13 +586,17 @@ extern int start_ifaces( context_t* ctx ) {
 	}
 	bleat_printf( 1, "%d rx interfaces started", ctx->nrxifs );
 
-	for( i = 0; i < ctx->ntxifs; i++ ) {
-		if( ! start_one_iface( ctx, ctx->tx_ifs[i] ) ) {
-			bleat_printf( 0, "CRI: start_ifaces: start tx interface %d failed" );
-			return 0;
+	if( ! (ctx->flags & CTF_TX_DUP) ) {
+		for( i = 0; i < ctx->ntxifs; i++ ) {
+			if( ! start_one_iface( ctx, ctx->tx_ifs[i] ) ) {
+				bleat_printf( 0, "CRI: start_ifaces: start tx interface %d failed" );
+				return 0;
+			}
 		}
+		bleat_printf( 1, "%d tx interfaces started", ctx->ntxifs );
+	} else {
+		bleat_printf( 1, "tx interfaces duped to Rx interfaces; no start needed" );
 	}
-	bleat_printf( 1, "%d tx interfaces started", ctx->ntxifs );
 
 	return 1;
 }

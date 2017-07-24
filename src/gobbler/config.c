@@ -45,6 +45,7 @@
 #include "gobbler.h"
 #include "lib_candidates.h"
 
+
 // -------------------------------------------------------------------------------------
 // safe free (free shouldn't balk on nil, but don't chance it)
 #define SFREE(p) if((p)){free(p);}			
@@ -185,6 +186,77 @@ static int dig_string_array( void* jblob, char const* array_name, char*** target
 }
 
 /*
+	Dig out the vlan set and the device names associated with the Tx devices.
+	The return is two pointers: [0]->device name array, [1]->vlan_set_t.
+	The caller must free the array after using the pointers.
+
+	We expect to find json like this:
+			tx_defs [
+				{ address: "pci-string", vlanids: [1, 2, .... n] },
+				{ address: "pci-string", vlanids: [1, 2, .... n] },
+				...
+			]
+
+	where 1, 2... are vlan ids, and pci-string is a pci address of the form: xxxx:yy:zz.a  
+*/
+static  void* dig_tx_info( void* config ) {
+	void**	mret;
+	char**	dev_addrs;		// pci addresses
+	vlan_set_t** vset;
+	void*	tblob;			// tx_dev blob from the config
+	int		i;
+	int		j;				// index into dev_addrs
+	int		ndevs;			// number of devices defined in array
+
+	mret = (void *) malloc( sizeof( void * ) * 2 );
+	dev_addrs = (char **) malloc( sizeof( char * ) * 64 );					// array of device name pointers to return
+	mret[0] = (void *) dev_addrs;
+	memset( dev_addrs, 0, sizeof( char * ) * 64 );
+
+	mret[1] = vset = (vlan_set_t **) malloc( sizeof( *vset ) * 64 );		// array of vset pointers to return
+	memset( vset, 0, sizeof( *vset ) );
+
+	if( (ndevs = jw_array_len( config, "tx_devs" )) <= 0 ) {
+		return mret;
+	}
+
+	j = 0;
+	for( i = 0; i < ndevs; i++ ) {
+		int		nvlans;															// number of vlans in the set
+		int		k;
+		vlan_set_t*	vs;
+
+		if( (tblob = jw_obj_ele( config, "tx_devs", i )) != NULL ) {
+			if( (dev_addrs[j] = strdup( jw_string( tblob, "address" ))) != NULL ) {		// get the pci address for this tx device
+				if( (nvlans = jw_array_len( tblob, "vlanids" )) > 0 ) {					// if there are vlan ids defined suss them out
+					vs = (vlan_set_t *) malloc( sizeof( *vs ) );
+					memset( vs, 0, sizeof( *vs ) );
+					vset[j] = vs;
+					vs->nvlans = nvlans;
+					vs->vlans = (uint16_t *) malloc( sizeof( uint16_t ) * nvlans );
+
+					for( k = 0; k < nvlans; k++ ) {										// pull each and add to vlan set
+						if( jw_is_value_ele( tblob, "vlanids", k ) ) {
+							vs->vlans[k] = jw_value_ele( tblob, "vlanids", k );			// snarf it
+						}
+					}
+				} else {
+					vs = NULL;
+				}
+			} else {
+//fprintf( stderr, ">>> no tx+dev address???? \n" );
+			}
+
+			j++;
+		} else {
+//fprintf( stderr, ">>> no tx+dev tblob???? \n" );
+		}
+	}
+
+	return mret;
+}
+
+/*
 	Open the file, and read the json there returning a populated structure from
 	the json bits we expect to find.
 
@@ -215,9 +287,15 @@ static int dig_string_array( void* jblob, char const* array_name, char*** target
 
 			#---- network interfaces -----------
 			rx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should listen to
-			tx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should transmit on
+			//deprecated tx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should transmit on
+			tx_devs: 		[
+					{
+						address: <string>,			# address of the device
+						vlanids: [<int>,...]		# downstream VLAN IDs when transmitting
+					}...
+			]
 			duprx2tx:		<bool>,				# duplicates rx_interfaces as tx interfaces
-			ds_vlanid:		<value>				# vlan id put into output packets; 0 means no change
+			ds_vlanid:		<value>				# default vlan id put into output packets; 0 means no change
 			downstream_mac: <string>,			# mac address where downstream packets are forwarded
 			xmit_type:		<string>,			# drop, rts, forward
 
@@ -237,6 +315,7 @@ extern config_t* read_config( char const* fname ) {
 	char*		buf;			// buffer read from file (nil terminated)
 	char*		cp;				// pointer into a string
 	int			i;
+	void**		mret;			// multiple return value
 
 	if( (buf = file_into_buf( fname, NULL )) == NULL ) {
 		return NULL;
@@ -301,7 +380,6 @@ extern config_t* read_config( char const* fname ) {
 		}
 
 		config->cpu_mask = get_value_as_str( jblob, "cpu_mask", NULL, FMT_HEX );	// default is applied in the initialisation function
-		//config->mem_chans = get_value_as_str( jblob, "mem_chans", NULL, FMT_INT );
 
 		if( *config->log_file == '/' && 
 			(cp = strrchr( config->log_file, '/' )) != NULL &&
@@ -320,10 +398,11 @@ extern config_t* read_config( char const* fname ) {
 			config->log_file = strdup( wbuf );
 		}
 
-		config->nrx_devs = dig_string_array( jblob, "rx_devs", &config->rx_devs );		//  list of tx/rx devices
-		if( (config->ntx_devs = dig_string_array( jblob, "tx_devs", &config->tx_devs )) < 0 ) {		// not defined, so it will be -1; we need it to be 0
-			config->ntx_devs = 0;
-		}
+		config->nrx_devs = dig_string_array( jblob, "rx_devs", &config->rx_devs );					//  list of tx/rx devices
+		//if( (config->ntx_devs = dig_string_array( jblob, "tx_devs", &config->tx_devs )) < 0 ) {		// not defined, so it will be -1; we need it to be 0
+			//config->ntx_devs = 0;
+		//}
+		
 
 		if( config->nrx_devs > 0 ) {
 			config->rx_ports = (int *) malloc( sizeof( int ) * config->nrx_devs );				// must do last as we depend on number of things in arrays
@@ -331,12 +410,24 @@ extern config_t* read_config( char const* fname ) {
 				config->rx_ports[i] = -1;
 			}
 		}
-		if( config->ntx_devs > 0 ) {
+
+		// ---- dig out the more complicated Tx info --------
+
+		if( (config->ntx_devs = jw_array_len( jblob, "tx_devs" )) > 0 ) {
+			if( (mret = dig_tx_info( jblob )) != NULL ) {						// got some tx info mret[0] == address list, [1] == vlan set array
+				config->tx_devs = (char **) mret[0];
+				config->vlans = (vlan_set_t **) mret[1];
+			}		
+
 			config->tx_ports = (int *) malloc( sizeof( int ) * config->ntx_devs );
 			for( i = 0; i < config->ntx_devs; i++ ) {
 				config->tx_ports[i] = -1;
 			}
 		}
+/*
+		if( config->ntx_devs > 0 ) {
+		}
+*/
 
 		jw_nuke( jblob );
 	} else {
@@ -366,6 +457,7 @@ extern void free_config( config_t* config ) {
 	SFREE( config->rx_ports );
 
 	for( i = 0; i < config->ntx_devs; i++ ) {
+		// do NOT free vsets as those pointers are passed out of the config for use later
 		SFREE( config->tx_devs[i] );
 	}
 	for( i = 0; i < config->nrx_devs; i++ ) {

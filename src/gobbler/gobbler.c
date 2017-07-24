@@ -110,6 +110,24 @@ int ok2run = 1;
 
 
 // --- these need to stay here as they are inline; don't move to tools --------------
+
+/*
+	Given an interface for Tx, find the next VLAN in the list to use, or return
+	the default if there isn't a vlan list.
+*/
+static inline uint16_t get_vlan( vlan_set_t* vset, uint16_t def_vlan ) {
+
+	if( vset !=  NULL ) {
+		if( vset->idx >= vset->nvlans ) {
+			vset->idx = 0;
+		}
+
+		return vset->vlans[vset->idx++];
+	}
+
+	return def_vlan;
+}
+
 /*
 	Push both the source and dest mac addresses into the packet referenced by the 
 	mbuf passed in.
@@ -396,12 +414,19 @@ static int gobble( void* vctx ) {
 
 					case SEND_DOWNSTREAM_VLAN:
 						for( i = 0; i < npkts; i++ ) {
-							push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
+							//push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
+							// todo - rotate through source mac addresses too
+							push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, get_vlan( tcif->vset, ctx->ds_vlanid )  );	// set addresses and vlan
 
 							if( (state = rte_eth_tx_buffer( tcif->portid, 0, tcif->tx_bufs[0], pkts[i] )) >= 0 ) {
 								tcif->stats.txed += state;				// unlikely, but it could have forced a flush and sent more than 1
 								tcount += state;
 								tcif->bwrites++;						// bwrites isn't accurate if tx_buffer forced a flush as we never know drops
+
+								if( unlikely( ctx->dump_size ) ) {
+									bleat_printf( 1, "FWDv: if=%d pkt %d of %d len=%d first %d bytes", j, i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), ctx->dump_size );
+									dump_octs( rte_pktmbuf_mtod( pkts[i], unsigned const char*), ctx->dump_size > 1 ? (int) ctx->dump_size : (int)  rte_pktmbuf_pkt_len( pkts[i] ) );
+								}
 							} else {
 								rte_pktmbuf_free( pkts[i] );
 							}
@@ -466,7 +491,7 @@ int main( int argc, char** argv ) {
 	int state;
 	unsigned lcore_id;
 
-	cfg = crack_args( argc, argv );			// crack the command line args, parse the config to build a config struct
+	cfg = crack_args( argc, argv, "./gobbler.cfg" );			// crack the command line args, parse the config to build a config struct
 	if( cfg == NULL ) {
 		fprintf( stderr, "abort: internal mishap: unable to build a config struct\n" );
 		exit( 1 );
@@ -488,7 +513,7 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	bleat_printf( 1, "gobbler started: v2.0/17510" );
+	bleat_printf( 1, "gobbler started: v3.0/17723" );
 	bleat_printf( 1, version );	
 
 	if( getuid() != 0 || geteuid() != 0 ) {
