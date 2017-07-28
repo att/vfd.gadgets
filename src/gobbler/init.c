@@ -425,9 +425,10 @@ extern context_t* mk_context( config_t* cfg ) {
 			for( i = 0; i < cfg->nrx_devs; i++ ) {
 				nc->tx_ifs[i] = nc->rx_ifs[i];
 				nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured; we ignore the address
+				nc->tx_ifs[i]->mset = cfg->macs[i];				// give the mac set configured
 			}
 			nc->ntxifs = cfg->nrx_devs;
-			bleat_printf( 1, "rx interfaces successfully duplicated on the tx list" );
+			bleat_printf( 1, "tx interfaces successfully duplicated onto the rx list" );
 			nc->flags |= CTF_TX_DUP;
 		} else {
 			if( nc->xmit_type != DROP ) {			// only warn them if they didn't specify drop
@@ -482,9 +483,15 @@ extern context_t* mk_context( config_t* cfg ) {
 		- allocate and register tx buffers
 		- start the port
 		- put port into promisc mode (if enabled in config)
+
+	There are a couple of things that need to wait until after
+	the port is up to finally do:
+		- insert the mac into the tx mac list if there is a
+			00:00...:00 entry
 */
 static int start_one_iface( context_t* ctx, iface_t* iface ) {
 	int i;
+	int j;
 	int state;
 
 	if( iface == NULL ) {
@@ -559,6 +566,27 @@ static int start_one_iface( context_t* ctx, iface_t* iface ) {
 	rte_eth_macaddr_get( iface->portid, &iface->mac_addr );			// get such that dpdk header functions/macros have known quantity
 	iface->mac = get_mac_string( iface->portid );					// and a nice human readable form for logs
 	bleat_printf( 1, "port %d mac: %s", iface->portid, iface->mac );
+
+	if( iface->mset != NULL ) {
+		uint8_t* m;
+
+		for( i = 0; i < (int) iface->mset->nmacs; i++ ) {
+			m = &iface->mset->macs[i].addr_bytes[0];
+			if( (unsigned char) *m == 0 ) {
+				m++;
+				for( j = 1; j < 6; j++ ) {
+					if( (unsigned char) *m != 0 ) {
+						break;
+					}
+					m++;
+				}
+
+				if( j == 6 ) {				// mac address was all zeros
+					ether_addr_copy( &iface->mac_addr, &iface->mset->macs[i] );			// copy from->to
+				}
+			}
+		}
+	}
 
 	iface->flags |= IFFL_RUNNING;			// succesfully started; can be stopped at shutdown/signal
 	return 1;

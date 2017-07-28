@@ -112,6 +112,23 @@ int ok2run = 1;
 // --- these need to stay here as they are inline; don't move to tools --------------
 
 /*
+	Given an interface for Tx, find the next MAC in the list to use, or return
+	the default if there isn't a mac list.
+*/
+static inline struct ether_addr*  get_mac( mac_set_t* mset, struct ether_addr* def_mac ) {
+
+	if( mset !=  NULL ) {
+		if( mset->idx >= mset->nmacs ) {
+			mset->idx = 0;
+		}
+
+		return &mset->macs[mset->idx++];
+	}
+
+	return def_mac;
+}
+
+/*
 	Given an interface for Tx, find the next VLAN in the list to use, or return
 	the default if there isn't a vlan list.
 */
@@ -143,14 +160,17 @@ static inline void push_mac_addrs( struct rte_mbuf *mb, struct ether_addr const*
 /*
 	Swap the dest/src mac addresses to return the traffic to the sender.
 	If tcif is not nil, we look to see if the dest mac is a multicast packet and if it is
-	we put the mac address from the interface in rather than swapping them.
+	we put the mac address from the interface in rather than swapping them. We make broad
+	assumptions about what is broa/mulitcast.  We assume any mac address starting with 0x01 
+	is multicast (we don't validate the range), and that any mac starting with 0xff is 
+	broascast (we don't manage a netmask).
 */
 static inline void swap_mac_addrs( iface_t* tcif, struct rte_mbuf *mb ) {
 	struct ether_hdr *eth;									// ethernet header in the mbuf
 	struct ether_addr tmp;
 
 	eth = rte_pktmbuf_mtod( mb, struct ether_hdr *);		// @header (this is a bleeding macro; why is it not caps? DPDK fail)
-	if( likely( tcif != NULL ) && eth->d_addr.addr_bytes[0] == 0x01 ) {	 //multicast address
+	if( likely( tcif != NULL ) && (eth->d_addr.addr_bytes[0] == 0x01 ||  eth->d_addr.addr_bytes[0] == 0xff) ) {	 //multicast or broadcast address
 		ether_addr_copy( &tcif->mac_addr, &tmp);
 	} else {
 		ether_addr_copy( &eth->d_addr, &tmp);
@@ -422,8 +442,9 @@ static int gobble( void* vctx ) {
 					case SEND_DOWNSTREAM_VLAN:				// set if ds_vlan is > 0 in config
 						for( i = 0; i < npkts; i++ ) {
 							//push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
-							// todo - rotate through source mac addresses too
-							push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, get_vlan( tcif->vset, ctx->ds_vlanid )  );	// set addresses and vlan
+
+							// set the src mac and the vlan; get_mac/vlan() rotates through the list given in the config
+							push_mac_vlan( pkts[i], &ctx->downstream_mac, get_mac( tcif->mset, &tcif->mac_addr ), get_vlan( tcif->vset, ctx->ds_vlanid )  );
 
 							if( (state = rte_eth_tx_buffer( tcif->portid, 0, tcif->tx_bufs[0], pkts[i] )) >= 0 ) {
 								tcif->stats.txed += state;				// unlikely, but it could have forced a flush and sent more than 1
@@ -520,7 +541,7 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	bleat_printf( 1, "gobbler started: v3.0/17723" );
+	bleat_printf( 1, "gobbler started: v3.0/17728" );
 	bleat_printf( 1, version );	
 
 	if( getuid() != 0 || geteuid() != 0 ) {

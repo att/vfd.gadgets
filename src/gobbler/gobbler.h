@@ -116,13 +116,25 @@ typedef struct if_stats {
 
 
 /*
-	Manages a set of VLAN IDs that we rotate through when we Tx on a device
+	Manages a set of VLAN IDs that we rotate through when we Tx on a device.
+	Allows us to simulate an application that writes to multiple VLANs.
 */
 typedef struct vlan_set {
 	uint16_t*	vlans;			// the array of IDs we loop through
 	uint32_t	idx;			// index into the array
 	uint32_t	nvlans;			// number in the list
 } vlan_set_t;
+
+/*
+	Set of mac addresses that we will 'loop' through as we forward/return 
+	packets so that we can simulate an application that might be sending
+	with multiple src addresses.
+*/
+typedef struct mac_set {
+	struct ether_addr* macs;	// macs in the form that can be inserted into the packet
+	uint32_t	idx;			// index into the array
+	uint32_t	nmacs;			// number in the list
+} mac_set_t;
 
 /*
 	Describes an interface (pci we assume) and maps it to a port in dpdk terms.
@@ -137,7 +149,8 @@ typedef struct iface {
 	int nrxq;
 	int	ntxdesc;							// number of descriptors to allocate
 	int nrxdesc;
-	vlan_set_t	*vset;						// a list of VLAN IDs that are rotated through when Txing to this dev
+	vlan_set_t*	vset;						// a list of VLAN IDs that are rotated through when Txing to this dev
+	mac_set_t*	mset;						// set of macs to rotate through if Tx-ing to this device
 	uint64_t last_clock;					// clock value of last flush
 	struct ether_addr gate;					// router/gateway mac address to send routable packets to on this interface
 	struct ether_addr mac_addr;				// the mac address of this port in dpdk form
@@ -161,6 +174,7 @@ typedef struct config {
 	int*	rx_ports;				// port numbers corresponding to the rx_devs names
 	int*	tx_ports;				// tx port numbers
 	vlan_set_t** vlans;				// vlans per tx dev (order matches tx_ports order)
+	mac_set_t**	macs;				// macs per tx dev (order matches tx_ports order)
 
 	char*	log_dir;
 	char*	log_file;				// fully qualified log file name to give to bleat
