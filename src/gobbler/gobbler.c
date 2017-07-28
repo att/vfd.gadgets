@@ -425,21 +425,27 @@ static int gobble( void* vctx ) {
 						}	
 						break;
 
-					case SEND_DOWNSTREAM:					// set if ds_vlan is <= 0 in config
+					case SEND_DOWNSTREAM:					// set if ds_vlan is <= 0 in config; do not attempt to insert vlan here
 						for( i = 0; i < npkts; i++ ) {
 							push_mac_addrs( pkts[i], &ctx->downstream_mac, &tcif->mac_addr );		// set just the mac address
+							push_mac_addrs( pkts[i], &ctx->downstream_mac, get_mac( tcif->mset, &tcif->mac_addr ) );		// set downstream and source from the list or ours if none
 
 							if( (state = rte_eth_tx_buffer( tcif->portid, 0, tcif->tx_bufs[0], pkts[i] )) >= 0 ) {
 								tcif->stats.txed += state;	
 								tcount += state;
 								tcif->bwrites++;
+
+								if( unlikely( ctx->dump_size ) ) {
+									bleat_printf( 1, "FWD-NV: if=%d pkt %d of %d len=%d first %d bytes", j, i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), ctx->dump_size );
+									dump_octs( rte_pktmbuf_mtod( pkts[i], unsigned const char*), ctx->dump_size > 1 ? (int) ctx->dump_size : (int)  rte_pktmbuf_pkt_len( pkts[i] ) );
+								}
 							} else {
 								rte_pktmbuf_free( pkts[i] );
 							}
 						}
 						break;
 
-					case SEND_DOWNSTREAM_VLAN:				// set if ds_vlan is > 0 in config
+					case SEND_DOWNSTREAM_VLAN:				// set if ds_vlan is > 0 in config; insert vlan then
 						for( i = 0; i < npkts; i++ ) {
 							//push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
 
