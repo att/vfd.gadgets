@@ -142,13 +142,20 @@ static inline void push_mac_addrs( struct rte_mbuf *mb, struct ether_addr const*
 
 /*
 	Swap the dest/src mac addresses to return the traffic to the sender.
+	If tcif is not nil, we look to see if the dest mac is a multicast packet and if it is
+	we put the mac address from the interface in rather than swapping them.
 */
-static inline void swap_mac_addrs( struct rte_mbuf *mb ) {
+static inline void swap_mac_addrs( iface_t* tcif, struct rte_mbuf *mb ) {
 	struct ether_hdr *eth;									// ethernet header in the mbuf
 	struct ether_addr tmp;
 
 	eth = rte_pktmbuf_mtod( mb, struct ether_hdr *);		// @header (this is a bleeding macro; why is it not caps? DPDK fail)
-	ether_addr_copy( &eth->d_addr, &tmp);
+	if( likely( tcif != NULL ) && eth->d_addr.addr_bytes[0] == 0x01 ) {	 //multicast address
+		ether_addr_copy( &tcif->mac_addr, &tmp);
+	} else {
+		ether_addr_copy( &eth->d_addr, &tmp);
+	}
+
 	ether_addr_copy( &eth->s_addr, &eth->d_addr);
 	ether_addr_copy( &tmp, &eth->s_addr);
 }
@@ -383,7 +390,7 @@ static int gobble( void* vctx ) {
 				switch( ctx->xmit_type ) {
 					case RETURN_TO_SENDER:							// just push the packets back out with the addresses reversed
 						for( i = 0; i < npkts; i++ ) {
-							swap_mac_addrs( pkts[i] );
+							swap_mac_addrs( tcif, pkts[i] );
 							if( (state = rte_eth_tx_buffer( tcif->portid, 0, tcif->tx_bufs[0], pkts[i] )) >= 0 ) {
 								tcif->stats.txed += state;	
 								tcount += state;
@@ -398,7 +405,7 @@ static int gobble( void* vctx ) {
 						}	
 						break;
 
-					case SEND_DOWNSTREAM:
+					case SEND_DOWNSTREAM:					// set if ds_vlan is <= 0 in config
 						for( i = 0; i < npkts; i++ ) {
 							push_mac_addrs( pkts[i], &ctx->downstream_mac, &tcif->mac_addr );		// set just the mac address
 
@@ -412,7 +419,7 @@ static int gobble( void* vctx ) {
 						}
 						break;
 
-					case SEND_DOWNSTREAM_VLAN:
+					case SEND_DOWNSTREAM_VLAN:				// set if ds_vlan is > 0 in config
 						for( i = 0; i < npkts; i++ ) {
 							//push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
 							// todo - rotate through source mac addresses too
