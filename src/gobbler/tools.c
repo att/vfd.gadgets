@@ -144,11 +144,12 @@ extern uint8_t* ipv6str2bytes( char* str, uint8_t* bytes ) {
 	it is at leaset 6 bytes in length.
 */
 extern unsigned char* macstr2buf( unsigned char const* mstr, unsigned char *out_buf) {
-	unsigned char*	mdup;		// duplicate for us to trash
+	unsigned char*	mdup = NULL;		// duplicate for us to trash
 	unsigned char*	tok;
 	char*	tok_data = NULL;
 	unsigned char*	ob_ele;				// element in the buffer
 	int		need = ETHER_ADDR_LEN;		// no more than this please
+	int		alloc_here = 0;				// if we allocate, we must free on error
 
 	if( (mdup = (unsigned char *) strdup( (char const *) mstr )) == NULL ) {			// shouldn't happen, but parnoia saves lives
 		return NULL;
@@ -158,6 +159,7 @@ extern unsigned char* macstr2buf( unsigned char const* mstr, unsigned char *out_
 			free( mdup );
 			return NULL;
 		}
+		alloc_here = 1;
 	}
 	memset( out_buf, 0, sizeof( unsigned char ) * ETHER_ADDR_LEN );
 	ob_ele = out_buf;
@@ -172,7 +174,9 @@ extern unsigned char* macstr2buf( unsigned char const* mstr, unsigned char *out_
 			}
 			*ob_ele |= (tolower(*(tok+1)) - ((*(tok+1) > '9') ? ('a'-10) : '0'));
 		} else {
-			free( out_buf );
+			if( alloc_here ) {
+				free( out_buf );
+			}
 			free( mdup );
 			return NULL;
 		}
@@ -183,7 +187,9 @@ extern unsigned char* macstr2buf( unsigned char const* mstr, unsigned char *out_
 	
 	free( mdup );
 	if( need != 0 ) {		// bad -- not enough digits
-		free( out_buf );
+		if( alloc_here ) {
+			free( out_buf );
+		}
 		return NULL;
 	}
 

@@ -57,7 +57,6 @@ typedef enum { FMT_FLOAT=0, FMT_INT, FMT_HEX } formats_t;
 
 // --------------------------- utility   --------------------------------------------------------------
 
-
 /*
 	Look up a boolean returning the default if it's not a boolean or not defined.
 */
@@ -187,12 +186,13 @@ static int dig_string_array( void* jblob, char const* array_name, char*** target
 
 /*
 	Dig out the vlan set and the device names associated with the Tx devices.
-	The return is two pointers: [0]->device name array, [1]->vlan_set_t.
+	The return is two pointers: [0]->device name array, [1]->vlan_set_t and 
+	[2]->mac_set_t.
 	The caller must free the array after using the pointers.
 
 	We expect to find json like this:
 			tx_defs [
-				{ address: "pci-string", vlanids: [1, 2, .... n] },
+				{ address: "pci-string", vlanids: [1, 2, .... n], macs[ "m1", "m"...] },
 				{ address: "pci-string", vlanids: [1, 2, .... n] },
 				...
 			]
@@ -202,13 +202,14 @@ static int dig_string_array( void* jblob, char const* array_name, char*** target
 static  void* dig_tx_info( void* config ) {
 	void**	mret;
 	char**	dev_addrs;		// pci addresses
-	vlan_set_t** vset;
+	vlan_set_t** vset;		// set of vlans collected from the json
+	mac_set_t** mset;		// set of mac addresses collected from the json
 	void*	tblob;			// tx_dev blob from the config
 	int		i;
 	int		j;				// index into dev_addrs
 	int		ndevs;			// number of devices defined in array
 
-	mret = (void *) malloc( sizeof( void * ) * 2 );
+	mret = (void *) malloc( sizeof( void * ) * 3 );							// allocate the return list
 	dev_addrs = (char **) malloc( sizeof( char * ) * 64 );					// array of device name pointers to return
 	mret[0] = (void *) dev_addrs;
 	memset( dev_addrs, 0, sizeof( char * ) * 64 );
@@ -216,40 +217,57 @@ static  void* dig_tx_info( void* config ) {
 	mret[1] = vset = (vlan_set_t **) malloc( sizeof( *vset ) * 64 );		// array of vset pointers to return
 	memset( vset, 0, sizeof( *vset ) );
 
+	mret[2] = mset = (mac_set_t **) malloc( sizeof( *mset ) * 64 );			// array of mac sets
+	memset( mset, 0, sizeof( *mset ) );
+
 	if( (ndevs = jw_array_len( config, "tx_devs" )) <= 0 ) {
 		return mret;
 	}
 
 	j = 0;
 	for( i = 0; i < ndevs; i++ ) {
-		int		nvlans;															// number of vlans in the set
+		int		nthings;															// number of vlans in the set
 		int		k;
+		char*	addr;
 		vlan_set_t*	vs;
+		mac_set_t* ms;
 
 		if( (tblob = jw_obj_ele( config, "tx_devs", i )) != NULL ) {
-			if( (dev_addrs[j] = strdup( jw_string( tblob, "address" ))) != NULL ) {		// get the pci address for this tx device
-				if( (nvlans = jw_array_len( tblob, "vlanids" )) > 0 ) {					// if there are vlan ids defined suss them out
-					vs = (vlan_set_t *) malloc( sizeof( *vs ) );
-					memset( vs, 0, sizeof( *vs ) );
-					vset[j] = vs;
-					vs->nvlans = nvlans;
-					vs->vlans = (uint16_t *) malloc( sizeof( uint16_t ) * nvlans );
-
-					for( k = 0; k < nvlans; k++ ) {										// pull each and add to vlan set
-						if( jw_is_value_ele( tblob, "vlanids", k ) ) {
-							vs->vlans[k] = jw_value_ele( tblob, "vlanids", k );			// snarf it
-						}
-					}
-				} else {
-					vs = NULL;
-				}
+			if( (addr = jw_string( tblob, "address" )) != NULL ) {						// get the pci address for this tx device
+				dev_addrs[j] = strdup( addr );
 			} else {
-//fprintf( stderr, ">>> no tx+dev address???? \n" );
+				dev_addrs[j] = strdup( "dup" );
+			}
+
+			if( (nthings = jw_array_len( tblob, "vlanids" )) > 0 ) {					// if there are vlan ids defined suss them out
+				vs = (vlan_set_t *) malloc( sizeof( *vs ) );
+				memset( vs, 0, sizeof( *vs ) );
+				vset[j] = vs;
+				vs->nvlans = nthings;
+				vs->vlans = (uint16_t *) malloc( sizeof( uint16_t ) * nthings );
+
+				for( k = 0; k < nthings; k++ ) {										// pull each and add to vlan set
+					if( jw_is_value_ele( tblob, "vlanids", k ) ) {
+						vs->vlans[k] = jw_value_ele( tblob, "vlanids", k );			// snarf it
+					}
+				}
+			}
+
+			if( (nthings = jw_array_len( tblob, "macs" )) > 0 ) {					// if there are vlan ids defined suss them out
+				ms = (mac_set_t *) malloc( sizeof( *ms ) );
+				memset( ms, 0, sizeof( *ms ) );
+				mset[j] = ms;
+				ms->nmacs = nthings;
+				ms->macs = (struct ether_addr *) malloc( sizeof( struct ether_addr ) * nthings );
+
+				for( k = 0; k < nthings; k++ ) {														// pull each and add to mac set
+					if( (addr = jw_string_ele( tblob, "macs", k )) != NULL ) {					// snarf it, leave 0s if not
+						macstr2buf( (unsigned char const*) addr, &ms->macs[k].addr_bytes[0] );
+					}
+				}
 			}
 
 			j++;
-		} else {
-//fprintf( stderr, ">>> no tx+dev tblob???? \n" );
 		}
 	}
 
@@ -417,6 +435,7 @@ extern config_t* read_config( char const* fname ) {
 			if( (mret = dig_tx_info( jblob )) != NULL ) {						// got some tx info mret[0] == address list, [1] == vlan set array
 				config->tx_devs = (char **) mret[0];
 				config->vlans = (vlan_set_t **) mret[1];
+				config->macs = (mac_set_t **) mret[2];
 			}		
 
 			config->tx_ports = (int *) malloc( sizeof( int ) * config->ntx_devs );
@@ -457,7 +476,7 @@ extern void free_config( config_t* config ) {
 	SFREE( config->rx_ports );
 
 	for( i = 0; i < config->ntx_devs; i++ ) {
-		// do NOT free vsets as those pointers are passed out of the config for use later
+		// do NOT free vsets or msets as those pointers are passed out of the config for use later
 		SFREE( config->tx_devs[i] );
 	}
 	for( i = 0; i < config->nrx_devs; i++ ) {
