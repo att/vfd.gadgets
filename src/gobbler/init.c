@@ -392,8 +392,8 @@ extern context_t* mk_context( config_t* cfg ) {
 			}
 		}
 	}
-	if( ok != cfg->ntx_devs ) {
-		bleat_printf( 0, "CRI: unable to map one or more tx names to a port" );
+	if( cfg->ntx_devs > 0  &&  ok != cfg->ntx_devs ) {
+		bleat_printf( 0, "CRI: unable to map one or more tx names to a port (got %d wanted %d)", ok, cfg->ntx_devs );
 		free( nc );
 		return NULL;
 	}
@@ -406,8 +406,9 @@ extern context_t* mk_context( config_t* cfg ) {
 			return NULL;
 		}
 	}
-	bleat_printf( 1, "all rx interfaces successfully created" );
+	bleat_printf( 1, "all rx interfaces were successfully created" );
 
+	bleat_printf( 1, "checking dup devs %d %d ", cfg->duprx2tx, cfg->ntx_devs );
 	if( ! cfg->duprx2tx && cfg->ntx_devs > 0 ) {
 		for( i = 0; i < cfg->ntx_devs; i++ ) {
 			mb_need += cfg->tx_des + cfg->rx_des;
@@ -424,9 +425,14 @@ extern context_t* mk_context( config_t* cfg ) {
 		if( cfg->duprx2tx ) {
 			for( i = 0; i < cfg->nrx_devs; i++ ) {
 				nc->tx_ifs[i] = nc->rx_ifs[i];
-				nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured; we ignore the address
-				nc->tx_ifs[i]->mset = cfg->macs[i];				// give the mac set configured
+				if( cfg->vlans ) {
+					nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured; we ignore the address
+				} 
+				if( cfg->macs ) {
+					nc->tx_ifs[i]->mset = cfg->macs[i];				// give the mac set configured
+				}
 			}
+
 			nc->ntxifs = cfg->nrx_devs;
 			bleat_printf( 1, "tx interfaces successfully duplicated onto the rx list" );
 			nc->flags |= CTF_TX_DUP;
@@ -434,11 +440,13 @@ extern context_t* mk_context( config_t* cfg ) {
 			if( nc->xmit_type != DROP ) {			// only warn them if they didn't specify drop
 				bleat_printf( 0, "wrn: xmit type changed to drop because no tx devices were given and dup was false" );
 				nc->xmit_type = DROP;			// no tx so we must drop
+			} else {
+				bleat_printf( 1, "xmit type drop" );
 			}
 		}
 	}
 
-	if( cfg->ntx_devs > 0 || (cfg->downstream_mac != NULL && strcmp( cfg->downstream_mac, "drop" ) != 0) ) {
+	if( (cfg->duprx2tx || cfg->ntx_devs > 0) &&  (cfg->downstream_mac != NULL && strcmp( cfg->downstream_mac, "drop" ) != 0) ) {
 		macstr2buf( (unsigned char const*) cfg->downstream_mac, &nc->downstream_mac.addr_bytes[0] );
 		bleat_printf( 1, "downstream mac found: %s", cfg->downstream_mac );
 	} else {
