@@ -25,10 +25,10 @@
 static void usage( void ) {
 	const char *version = VERSION "    build: " __DATE__ " " __TIME__;
 
-	fprintf( stdout, "anolis version %s\n", version );
-	fprintf( stdout, "usage: anolis [-c config-file] [-d dump_size]  [-i] [-n] [-?]\n" );
-	fprintf( stdout, "\t-c file -  supplies the name of the file to read as the configuration; /etc/switchboard/anolis.cfg assumed if missing\n" );
-	fprintf( stdout, "\t-d n    -  dump first n bytes of each received packet\n" );
+	fprintf( stdout, "gobbler version %s\n", version );
+	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-i] [-n] [-?]\n" );
+	fprintf( stdout, "\t-c file - supplies the name of the file to read as the configuration; ./gobbler.cfg assumed if missing\n" );
+	fprintf( stdout, "\t-d n    - dump first n bytes of each received packet\n" );
 	fprintf( stdout, "\t-i      - interactive mode; prevents process from detaching the tty\n" );
 	fprintf( stdout, "\t-n      - no harm mode; won't be distructive though exactly what that means is not defined\n" );
 	fprintf( stdout, "\t-?      - display usage\n" );
