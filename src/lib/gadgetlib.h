@@ -59,6 +59,19 @@ extern char* jw_string_ele( void* st, const char* name, int idx );
 extern float jw_value( void* st, const char* name );
 extern float jw_value_ele( void* st, const char* name, int idx );
 
+//------------------ ng_flowmgr --------------------------------------------------------------------------
+void ng_flow_close( void *vf );
+void ng_flow_flush( void *vf );
+char* ng_flow_get( void *vf, char sep );
+void *ng_flow_open(  int size );
+void ng_flow_ref( void *vf, char *buf, long len );
+
+
+// ---------------- fifo ---------------------------------------------------------------------------------
+extern void* rfifo_create( char* fname, int mode );
+extern void rfifo_close( void* vfifo );
+extern char* rfifo_read( void* vfifo );
+extern char* rfifo_readln( void* vfifo );
 
 
 #endif

@@ -7,7 +7,7 @@ jsmn_lib = -L jsmn -ljsmn
 cc = gcc
 cflags = -I jsmn -g
 
-binaries = jwrapper_test bleat_test
+binaries = jwrapper_test bleat_test fifo_test
 
 %.o: %.c
 	$cc $cflags -c $prereq
@@ -16,7 +16,7 @@ all:V: libgadget.a
 
 
 lib = libgadget.a
-lib_src = jwrapper symtab bleat list_files
+lib_src = jwrapper symtab bleat list_files fifo ng_flowmgr
 
 $lib(%.o):N:    %.o
 $lib:   ${lib_src:%=$lib(%.o)}
@@ -47,6 +47,8 @@ old_list_test::	old_list_test.c $lib
 pfx_list_test::	pfx_list_test.c $lib
 	$cc $cflags pfx_list_test.c -o pfx_list_test -L. -lgadget $jsmn_lib
 
+fifo_test:: fifo_test.c $lib
+	$cc $cflags fifo_test.c -o fifo_test -L. -lgadget 
 
 
 all_tests:V:	jwrapper_test jwrapper_test2 bleat_test
