@@ -1,0 +1,3 @@
+
+%.md:: %.xfm
+	MARKDOWN=1 tfm $prereq stdout| sed 's/.//' >$target
