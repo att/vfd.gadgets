@@ -78,6 +78,10 @@ clean:
 verify:
 	echo "$(VERSION)"
 
+# ----- readme -- assumes {X}fm is installed 
+README: README.xfm
+	../../mk_readme.ksh
+
 # ----- unit tests -----------------
 all_tests:	$(test_bins)
 	@echo "all tests made"
