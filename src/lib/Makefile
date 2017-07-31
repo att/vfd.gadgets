@@ -12,12 +12,12 @@ cflags = -I jsmn -g
 CC = gcc $(cflags)
 cc = gcc $(cflags)
 
-binaries = jwrapper_test parm_file_test list_test fifo_test bleat_test
+binaries = jwrapper_test parm_file_test list_test bleat_test fifo_test
 
 all: libgadget.a
 
 lib = libgadget.a
-lib_src = jwrapper symtab list_files bleat 
+lib_src = jwrapper symtab list_files bleat fifo ng_flowmgr
 $(lib): $(lib_src:=.o)
 	ar r $(lib) $^
 
@@ -32,9 +32,6 @@ parm_file_test:	parm_file_test.c $(lib)
 vf_config_test:	vf_config_test.c $(lib)
 	$(cc) $(cflags) vf_config_test.c -o vf_config_test -L. -lgadget $(jsmn_lib)
 
-fifo_test:	fifo_test.c $(lib)
-	$(cc) $(cflags) fifo_test.c -o fifo_test -L. -lgadget $(jsmn_lib)
-
 bleat_test:	bleat_test.c $(lib)
 	$(cc) $(cflags) bleat_test.c -o bleat_test -L. -lgadget $(jsmn_lib)
 
@@ -44,6 +41,8 @@ list_test:	list_test.c $(lib)
 hot_plug:	hot_plug.c $(lib)
 	$(cc) $(cflags) hot_plug.c -o hot_plug -L. -lgadget $(jsmn_lib)
 
+fifo_test:	fifo_test.c $(lib)
+	$(cc) $(cflags) fifo_test.c -o fifo_test -L. -lgadget
 
 tests: $(binaries)
 
