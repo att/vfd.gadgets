@@ -547,7 +547,7 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	bleat_printf( 1, "gobbler started: v3.0/17728" );
+	bleat_printf( 1, "gobbler started: v3.0/17731" );
 	bleat_printf( 1, version );	
 
 	if( getuid() != 0 || geteuid() != 0 ) {
