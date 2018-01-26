@@ -33,6 +33,7 @@
 #define CF_ASYNC	0x02			// detach the process from the tty
 #define CF_HUGE_PAGES	0x04		// enable huge pages
 #define CF_PROMISC	0x08			// prmoisc==true in config
+#define CF_GEN_MACS	0x10			// generate a few white list macs to test macvlan
 
 
 #define RETURN_TO_SENDER	1		// xmit types; send back to the orig addres
