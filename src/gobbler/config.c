@@ -299,6 +299,7 @@ static  void* dig_tx_info( void* config ) {
 			pid_fname:		<string>,
 			cpu_mask:		<value|string>,		# can be a string like "0x0a" or just integer like 10
 
+			gen_macs:		<boolean>,			# if true then we generate a few whitelist mac addresses
 			mem_chans:		<value>,
 			huge_pages:		<boolean>,			# testing only; default is true
 			tot_mem:		<value>,			# total dpdk memory to allocate for the rpocess
@@ -385,6 +386,12 @@ extern config_t* read_config( char const* fname ) {
 			}
 		}
 
+		if( get_bool( jblob, "gen_macs", FALSE ) == FALSE ) {
+			config->flags &= ~CF_GEN_MACS;
+		} else {
+			config->flags |= CF_GEN_MACS;
+		}
+
 		if( get_bool( jblob, "huge_pages", TRUE ) == FALSE ) {
 			config->flags &= ~CF_HUGE_PAGES;
 		} else {
@@ -412,8 +419,10 @@ extern config_t* read_config( char const* fname ) {
 		} else {
 			char	wbuf[2048];
 
-			snprintf( wbuf, sizeof( wbuf ), "%s/%s", config->log_dir, config->log_file );
-			config->log_file = strdup( wbuf );
+			if( strcmp( config->log_file, "stderr" ) ) {					// append directory name only if stderr is not the indicated file
+				snprintf( wbuf, sizeof( wbuf ), "%s/%s", config->log_dir, config->log_file );
+				config->log_file = strdup( wbuf );
+			}
 		}
 
 		config->nrx_devs = dig_string_array( jblob, "rx_devs", &config->rx_devs );					//  list of tx/rx devices
