@@ -3,7 +3,7 @@
 # {X}fm tools can be cloned and built using: https://github.com/ScottDaniels/xfm.git
 
 
-all:V: README.md README.txt README.html README.ps
+all:V: README.md README.txt README.html README.ps README.pdf
 
 # tfm always insists on a leading space, so we must strip it as bloody markdown
 # treats leading spaces as significant (grrr)
@@ -19,3 +19,7 @@ all:V: README.md README.txt README.html README.ps
 
 %.html:: %.xfm
 	MARKDOWN=0 hfm $prereq $target
+
+# requires ghostscript be installed
+%.pdf:: %.ps
+	gs $FONTS -dBATCH  -dNOPROMPT -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=${prereq%%.ps*}.pdf ${prereq%% *}
