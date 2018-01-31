@@ -220,11 +220,11 @@ when there is no array given.
 If this value is set to 0, then gobbler assumes that VLAN IDs are being stripped from the packets
 and gobbler will NOT attempt to insert a VLAN ID into any packet on transmission.
 
-&h3(Ohter Parameters)
+&h3(Other Parameters)
 The other parameters in the configuration file should be fairly obvious and are briefly described
 below. 
 .sp
-&def_list
+&def_list( 1i &bold_font )
 &di(mbufs) The number of message buffers that gobbler allocates for packet processing.
 .sp 
 &di(rx_des) The number of receive descriptors allocated.
@@ -245,6 +245,8 @@ below.
 &end_dlist
 
 
+.sp 2
+.lw 0
 .ln
 .gv Date
 .gv version
