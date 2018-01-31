@@ -14,7 +14,11 @@ one of the Tx devices.
  
  
 ## Requirements 
-Version 17.08 of DPDK should be used to build gobbler. 
+The most recent commit works with DPDK 18.02 (rc1) and that 
+version should be used. It has been built in the past with 
+DPDK version 17.08 of DPDK, and it might still build 
+against that (two changes in init.c, includes, were made to 
+support 18.02). 
  
  
 ## Building 
@@ -56,14 +60,14 @@ Some of the bits of information which can be defined
 include: 
  
  
-   
-* White list of both Tx and Rx devices    
-* VLAN IDs to insert into forwarded messages    
+* White list of both Tx and Rx devices 
+* VLAN IDs to insert into forwarded messages 
 * MAC addresses to insert as the source in forwarded 
-messages    
-* Log file, directory, and verbosity settings    
-* MAC address of downstream process (forward target)    
+messages 
+* Log file, directory, and verbosity settings 
+* MAC address of downstream process (forward target) 
 * traditional DPDK command line parameters 
+ 
  
 The configuration file is assumed to be in ./gobbler.cfg, 
 though the command line parameter -c can be used to supply 
@@ -75,45 +79,51 @@ alternate location.
 The configuration file is a set of information provided in 
 JSON format. The following illustrates the layout with an 
 explanation of the various fields following. 
+  
+  
+  
+    {
+       "ds_vlanid":        99,
+   
+       "log_level":        2,
+       "dpdk_log_level":   3,
+       "log_keep":         27,
+       "xlog_dir":         "/tmp/gbbler/logs",
+       "log_file":         "stderr",
+       "init_lldelta":     2,
+   
+       "mbufs":            1024,
+       "rx_des":           128,
+       "tx_des":           128,
+       "mtu":              9009,
+   
+       "duprx2tx":         true,
+       "rx_devs":          [ "0000:00:04.0", 
+                             "0000:00:05.0" ],
+   
+       "tx_devs":          [ 
+                  {  "address": "dup0", 
+                     "vlanids": [ 101, 11, 12 ],   
+                     "macs": [ "76:df:b5:6a:99:0d", 
+                               "76:df:b5:6a:99:0e", "" ]
+                  },
+                  {  "address": "dup0", 
+                     "vlanids": [ 101, 111, 112 ], 
+                     "macs": [ "76:df:b5:6a:99:0d", 
+                               "76:df:b5:6a:99:0e" ] 
+                  },
+       ],
+   
+       "xmit_type":        "forward",
+       "downstream_mac":   "fa:ce:de:02:00:02",
+   
+       "cpu_mask":         "0x1",
+       "lock_name":        "gobbler",
+       "mem_chans":        4,
+       "huge_pages":       true,
+       "promiscuous":      false
+    }
  
-     
-          {
-             "ds_vlanid":        99,
-         
-             "log_level":        2,
-             "dpdk_log_level":   3,
-             "log_keep":         27,
-             "xlog_dir":         "/tmp/gbbler/logs",
-             "log_file":         "stderr",
-             "init_lldelta":     2,
-         
-             "mbufs":            1024,
-             "rx_des":           128,
-             "tx_des":           128,
-             "mtu":              9009,
-         
-             "duprx2tx":         true,
-             "rx_devs":          [ "0000:00:04.0", "0000:00:05.0" ],
-             "tx_devs":          [ 
-                        {  "address": "dup0", 
-                           "vlanids": [ 101, 11, 12 ],   
-                           "macs": [ "76:df:b5:6a:99:0d", "76:df:b5:6a:99:0e", "" ]
-                        },
-                        {  "address": "dup0", 
-                           "vlanids": [ 101, 111, 112 ], 
-                           "macs": [ "76:df:b5:6a:99:0d", "76:df:b5:6a:99:0e" ] 
-                        },
-             ],
-         
-             "xmit_type":        "forward",
-             "downstream_mac":   "fa:ce:de:02:00:02",
-         
-             "cpu_mask":         "0x1",
-             "lock_name":        "gobbler",
-             "mem_chans":        4,
-             "huge_pages":       true,
-             "promiscuous":      false
-          }
  
  
  
@@ -237,4 +247,4 @@ usually be true or odd results happen).
 on the device(s). 
  
 ___________________________________________________________
-Formatted on 31 July 2017 using tfm V2.2/0a266 
+Formatted on 31 January 2018 using tfm V2.2/0a266 

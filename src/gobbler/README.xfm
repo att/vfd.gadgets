@@ -1,12 +1,10 @@
 .if false
 	Source to generate the readme in one of various forms using {X}fm:
 		MARKDOWN=1 tfm README.xfm README.md
-		pfm README.xfm README.ps
-		hfm README.xfm README.html
+		MARKDOWN=0 pfm README.xfm README.ps
+		MARKDOWN=0 hfm README.xfm README.html
 
-	or use mk_readme.ksh to generate them all. 
-
-	DO NOT modify the README.md/.ps files manually; change the source and
+	DO NOT modify the README.md/.ps/.html files manually; change the source and
 	rebuild!!
 
 .fi
@@ -21,14 +19,18 @@
 .fi
 
 .** get specialised macros based on output format; might override defs above
+.** becasue this file uses odd variables for markdown (e.g. &beg_list) we must
+.** use markdown.im to set up for any of the formatters, not just when MARKDOWN
+.** is set.
+.** 
 .im &{lib}/markdown.im
+
 .if ! super
 	.dv msg ###ERROR### markdown.im seems to be missing or incomplete
 	.sv msg
+	&msg
 	.qu
 .fi
-
-
 
 &h1(Gobbler)
 Gobbler is a DPDK application which provides a simple packet receipt counting
@@ -41,7 +43,10 @@ devices.
 .sp 1
 
 &h2(Requirements)
-Version 17.08 of DPDK should be used to build gobbler.
+The most recent commit works with DPDK 18.02 (rc1) and that version should be
+used.  It has been built in the past with DPDK version 17.08 of DPDK, and it might
+still build against that (two changes in init.c, includes, were made to support
+18.02).
 
 &h2(Building)
 Gobbler is built in the same manner as any other DPDK application; using gmake.
@@ -100,9 +105,10 @@ an alternate location.
 The configuration file is a set of information provided in JSON format. 
 The following illustrates the layout with an explanation of the various fields following.
 
-.sp 1
-.in .5i
-.nf 
+.** .sp 1
+.** .in .5i
+.** .nf 
+&ex_start
  {
     "ds_vlanid":        99,
 
@@ -119,15 +125,19 @@ The following illustrates the layout with an explanation of the various fields f
     "mtu":              9009,
 
     "duprx2tx":         true,
-    "rx_devs":          [ "0000:00:04.0", "0000:00:05.0" ],
+    "rx_devs":          [ "0000:00:04.0", 
+                          "0000:00:05.0" ],
+
     "tx_devs":          [ 
                {  "address": "dup0", 
                   "vlanids": [ 101, 11, 12 ],   
-                  "macs": [ "76:df:b5:6a:99:0d", "76:df:b5:6a:99:0e", "" ]
+                  "macs": [ "76:df:b5:6a:99:0d", 
+                            "76:df:b5:6a:99:0e", "" ]
                },
                {  "address": "dup0", 
                   "vlanids": [ 101, 111, 112 ], 
-                  "macs": [ "76:df:b5:6a:99:0d", "76:df:b5:6a:99:0e" ] 
+                  "macs": [ "76:df:b5:6a:99:0d", 
+                            "76:df:b5:6a:99:0e" ] 
                },
     ],
 
@@ -140,9 +150,10 @@ The following illustrates the layout with an explanation of the various fields f
     "huge_pages":       true,
     "promiscuous":      false
  }
-.fo
-.in 0i
-.sp 1
+&ex_end
+.** .fo
+.** .in 0i
+.** .sp 1
 
 &h3( Log Information )
 The log_level and dpdk_log_level fields set the verbosity level during execution. The larger the 
@@ -238,3 +249,5 @@ below.
 .gv Date
 .gv version
 Formatted on &_date using &_ver
+
+&quit
