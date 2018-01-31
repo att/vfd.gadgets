@@ -22,7 +22,7 @@
 (Helvetica-bold) (GOBBLER) 0 16 [ 0.00 0.00 0.00  ] 
 1 splat
 90 -88 moveto
-(Helvetica) (Gobbler is a DPDK application which provides a simple packet receipt counting funciton with) 0 10 [ -1 ] 
+(Helvetica) (Gobbler is a DPDK application which provides a simple packet receipt counting function with) 0 10 [ -1 ] 
  1 414 13 just
 90 -100 moveto
 (Helvetica) (optional forwarding or return to sender modes. Gobbler opens one or more devices for input) 0 10 [ -1 ] 
@@ -31,7 +31,7 @@
 (Helvetica) (\(Rx\) and either duplicates the Rx devices for Tx, or opens one or more devices for) 0 10 [ -1 ] 
  1 414 15 just
 90 -124 moveto
-(Helvetica) (transmission \(Tx\). Pakcets received are counted and dropped, or forwarded onto one of the) 0 10 [ -1 ] 
+(Helvetica) (transmission \(Tx\). Packets received are counted and dropped, or forwarded onto one of the) 0 10 [ -1 ] 
  1 414 13 just
 90 -136 moveto
 (Helvetica) (Tx devices.) 0 10 [ -1 ] 
@@ -40,27 +40,501 @@
 (Helvetica-bold) (Requirements) 0 14 [ -1 ] 
 1 splat
 90 -212 moveto
-(Helvetica) (Version 17.08 of DPDK should be used to build gobbler.) 0 10 [ -1 ] 
-1 splat
-90 -252 moveto
-(Helvetica-bold) (Building) 0 14 [ -1 ] 
+(Helvetica) (The most recent commit works with DPDK 18.02 \(rc1\) and that version should be used. It has) 0 10 [ -1 ] 
+ 1 414 16 just
+90 -224 moveto
+(Helvetica) (been built in the past with DPDK version 17.08 of DPDK, and it might still build against that) 0 10 [ -1 ] 
+ 1 414 17 just
+90 -236 moveto
+(Helvetica) (\(two changes in init.c, includes, were made to support 18.02\).) 0 10 [ -1 ] 
 1 splat
 90 -276 moveto
-(Helvetica) (Gobbler is built in the same manner as any other DPDK appliction; using gmake. Execute the) 0 10 [ -1 ] 
- 1 414 15 just
-90 -288 moveto
-(Helvetica) (following command in this directory which will generate ./build/app/gobbler as a statically) 0 10 [ -1 ] 
- 1 414 11 just
+(Helvetica-bold) (Building) 0 14 [ -1 ] 
+1 splat
 90 -300 moveto
+(Helvetica) (Gobbler is built in the same manner as any other DPDK application; using gmake. Execute) 0 10 [ -1 ] 
+ 1 414 14 just
+90 -312 moveto
+(Helvetica) (the following command in this directory which will generate ./build/app/gobbler as a statically) 0 10 [ -1 ] 
+ 1 414 12 just
+90 -324 moveto
 (Helvetica) (linked binary.) 0 10 [ -1 ] 
 1 splat
-90 -318 moveto
+90 -342 moveto
 (Helvetica) (   make clean; make) 0 10 [ -1 ] 
 1 splat
-gsave 0 setlinewidth 90 -322 moveto 536 -322 lineto stroke grestore
-90 -338 moveto
-(Helvetica) (Formatted on 21 July 2017 using pfm V2.8/17243) 0 10 [ -1 ] 
+90 -366 moveto
+(Helvetica) (The gobbler binary \(statically linked\) will be placed into the ./build/apps directory.) 0 10 [ -1 ] 
+1 splat
+90 -406 moveto
+(Helvetica-bold) (Execution) 0 14 [ -1 ] 
+1 splat
+90 -430 moveto
+(Helvetica) (Gobbler uses a configuration file rather than overloading the command line with both) 0 10 [ -1 ] 
+ 1 414 12 just
+90 -442 moveto
+(Helvetica) (application and DPDK \(EAL\) parameters. As such, the command line is fairly straight forward:) 0 10 [ -1 ] 
+1 splat
+90 -454 moveto
+(Helvetica) (   sudo ./gobbler [-c config-file] [-i]) 0 10 [ -1 ] 
+1 splat
+90 -466 moveto
+(Helvetica) (If the name of the configuration file is not supplied on the command line, then ./gobbler.cfg is) 0 10 [ -1 ] 
+ 1 414 16 just
+90 -478 moveto
+(Helvetica) (assumed. The -i parameter \(interactive\) assumes that gobbler should not detach from the) 0 10 [ -1 ] 
+ 1 414 12 just
+90 -490 moveto
+(Helvetica) (TTY and that periodic updates of counts should be made more frequently to standard out.) 0 10 [ -1 ] 
+1 splat
+90 -516 moveto
+(Helvetica-bold) (The Configuration File) 0 12 [ -1 ] 
+1 splat
+90 -528 moveto
+(Helvetica) (The gobbler configuration file is used to define information about which ports \(PCI addresses\)) 0 10 [ -1 ] 
+ 1 414 13 just
+90 -540 moveto
+(Helvetica) (to use for reception and/or transmission, MTU size, CPU mask and other EAL configuration) 0 10 [ -1 ] 
+ 1 414 13 just
+90 -552 moveto
+(Helvetica) (parameters.) 0 10 [ -1 ] 
+1 splat
+90 -606 moveto
+(Helvetica-bold) (CONFIGURATION) 0 16 [ -1 ] 
+1 splat
+90 -630 moveto
+(Helvetica) (A configuration file is necessary to define all of the needed information to control the) 0 10 [ -1 ] 
+ 1 414 14 just
+90 -642 moveto
+(Helvetica) (behaviour of gobbler. Some of the bits of information which can be defined include:) 0 10 [ -1 ] 
+1 splat
+134 -672 moveto
+(Helvetica) (White list of both Tx and Rx devices) 0 10 [ -1 ] 
+1 splat
+134 -684 moveto
+(Helvetica) (VLAN IDs to insert into forwarded messages) 0 10 [ -1 ] 
+1 splat
+134 -696 moveto
+(Helvetica) (MAC addresses to insert as the source in forwarded messages) 0 10 [ -1 ] 
+1 splat
+134 -708 moveto
+(Helvetica) (Log file, directory, and verbosity settings) 0 10 [ -1 ] 
+1 splat
+134 -720 moveto
+(Helvetica) (MAC address of downstream process \(forward target\)) 0 10 [ -1 ] 
+1 splat
+(ZapfDingbats) findfont 5 scalefont setfont
+126 -670 moveto (\154) show
+126 -682 moveto (\154) show
+126 -694 moveto (\154) show
+126 -706 moveto (\154) show
+126 -718 moveto (\154) show
+(Helvetica) findfont 10 scalefont setfont
+0 -747 moveto
+ (Times-roman) (-1-) 0 10 [-1]
+ 612 1 cent
+newp
+134 -57 moveto
+(Helvetica) (traditional DPDK command line parameters) 0 10 [ 0.00 0.00 0.00  ] 
+1 splat
+(ZapfDingbats) findfont 5 scalefont setfont
+126 -55 moveto (\154) show
+90 -93 moveto
+(Helvetica) (The configuration file is assumed to be in ./gobbler.cfg, though the command line parameter) 0 10 [ -1 ] 
+ 1 414 13 just
+90 -105 moveto
+(Helvetica) (-c can be used to supply the name of the configuration file if it exists in an alternate location.) 0 10 [ -1 ] 
+1 splat
+90 -145 moveto
+(Helvetica-bold) (Sample Config File) 0 14 [ -1 ] 
+1 splat
+90 -170 moveto
+(Helvetica) (The configuration file is a set of information provided in JSON format. The following illustrates) 0 10 [ -1 ] 
+ 1 414 14 just
+90 -182 moveto
+(Helvetica) (the layout with an explanation of the various fields following.) 0 10 [ -1 ] 
+1 splat
+108 -198 moveto
+(Courier) ( {) 0 8 [ -1 ] 
+1 splat
+108 -208 moveto
+(Courier) (    "ds_vlanid":        99,) 0 8 [ -1 ] 
+1 splat
+108 -218 moveto
+108 -228 moveto
+(Courier) (     "log_level":        2,) 0 8 [ -1 ] 
+1 splat
+108 -238 moveto
+(Courier) (    "dpdk_log_level":   3,) 0 8 [ -1 ] 
+1 splat
+108 -248 moveto
+(Courier) (    "log_keep":         27,) 0 8 [ -1 ] 
+1 splat
+108 -258 moveto
+(Courier) (    "xlog_dir":         "/tmp/gbbler/logs",) 0 8 [ -1 ] 
+1 splat
+108 -268 moveto
+(Courier) (    "log_file":         "stderr",) 0 8 [ -1 ] 
+1 splat
+108 -278 moveto
+(Courier) (    "init_lldelta":     2,) 0 8 [ -1 ] 
+1 splat
+108 -288 moveto
+108 -298 moveto
+(Courier) (     "mbufs":            1024,) 0 8 [ -1 ] 
+1 splat
+108 -308 moveto
+(Courier) (    "rx_des":           128,) 0 8 [ -1 ] 
+1 splat
+108 -318 moveto
+(Courier) (    "tx_des":           128,) 0 8 [ -1 ] 
+1 splat
+108 -328 moveto
+(Courier) (    "mtu":              9009,) 0 8 [ -1 ] 
+1 splat
+108 -338 moveto
+108 -348 moveto
+(Courier) (     "duprx2tx":         true,) 0 8 [ -1 ] 
+1 splat
+108 -358 moveto
+(Courier) (    "rx_devs":          [ "0000:00:04.0", ) 0 8 [ -1 ] 
+1 splat
+108 -368 moveto
+(Courier) (                          "0000:00:05.0" ],) 0 8 [ -1 ] 
+1 splat
+108 -378 moveto
+108 -388 moveto
+(Courier) (     "tx_devs":          [ ) 0 8 [ -1 ] 
+1 splat
+108 -398 moveto
+(Courier) (               {  "address": "dup0", ) 0 8 [ -1 ] 
+1 splat
+108 -408 moveto
+(Courier) (                  "vlanids": [ 101, 11, 12 ],   ) 0 8 [ -1 ] 
+1 splat
+108 -418 moveto
+(Courier) (                  "macs": [ "76:df:b5:6a:99:0d", ) 0 8 [ -1 ] 
+1 splat
+108 -428 moveto
+(Courier) (                            "76:df:b5:6a:99:0e", "" ]) 0 8 [ -1 ] 
+1 splat
+108 -438 moveto
+(Courier) (               },) 0 8 [ -1 ] 
+1 splat
+108 -448 moveto
+(Courier) (               {  "address": "dup0", ) 0 8 [ -1 ] 
+1 splat
+108 -458 moveto
+(Courier) (                  "vlanids": [ 101, 111, 112 ], ) 0 8 [ -1 ] 
+1 splat
+108 -468 moveto
+(Courier) (                  "macs": [ "76:df:b5:6a:99:0d", ) 0 8 [ -1 ] 
+1 splat
+108 -478 moveto
+(Courier) (                            "76:df:b5:6a:99:0e" ] ) 0 8 [ -1 ] 
+1 splat
+108 -488 moveto
+(Courier) (               },) 0 8 [ -1 ] 
+1 splat
+108 -498 moveto
+(Courier) (    ],) 0 8 [ -1 ] 
+1 splat
+108 -508 moveto
+108 -518 moveto
+(Courier) (     "xmit_type":        "forward",) 0 8 [ -1 ] 
+1 splat
+108 -528 moveto
+(Courier) (    "downstream_mac":   "fa:ce:de:02:00:02",) 0 8 [ -1 ] 
+1 splat
+108 -538 moveto
+108 -548 moveto
+(Courier) (     "cpu_mask":         "0x1",) 0 8 [ -1 ] 
+1 splat
+108 -558 moveto
+(Courier) (    "lock_name":        "gobbler",) 0 8 [ -1 ] 
+1 splat
+108 -568 moveto
+(Courier) (    "mem_chans":        4,) 0 8 [ -1 ] 
+1 splat
+108 -578 moveto
+(Courier) (    "huge_pages":       true,) 0 8 [ -1 ] 
+1 splat
+108 -588 moveto
+(Courier) (    "promiscuous":      false) 0 8 [ -1 ] 
+1 splat
+108 -598 moveto
+(Courier) ( }) 0 8 [ -1 ] 
+1 splat
+90 -625 moveto
+(Helvetica-bold) (Log Information) 0 12 [ -1 ] 
+1 splat
+90 -638 moveto
+(Helvetica) (The log_level and dpdk_log_level fields set the verbosity level during execution. The larger) 0 10 [ -1 ] 
+ 1 414 12 just
+90 -650 moveto
+(Helvetica) ( is a value which) 0 10 [ -1 ] 
+(Helvetica-bold) ( init_lldelta) 0 10 [ -1 ] 
+(Helvetica) (the number the more chatty both gobbler and DPDK will be. The) 0 10 [ -1 ] 
+ 3 414 16 just
+90 -662 moveto
+(Helvetica) (is added to the log level values during initialisation. This allows for more information during) 0 10 [ -1 ] 
+ 1 414 14 just
+90 -674 moveto
+(Helvetica) (initialisation with a quieter runtime which is often desired.) 0 10 [ -1 ] 
+1 splat
+90 -698 moveto
+(Helvetica) () 0 10 [ -1 ] 
+(Helvetica-Oblique) ( stderr) 0 10 [ -1 ] 
+(Helvetica) (The log directory and log file are used to set the output of gobbler 'bleat' messages. If) 0 10 [ -1 ] 
+ 3 414 17 just
+90 -710 moveto
+(Helvetica) (is supplied as the log_file, then messages will be written to the standard error. DPDK) 0 10 [ -1 ] 
+ 1 414 14 just
+(Helvetica) findfont 10 scalefont setfont
+0 -747 moveto
+ (Times-roman) (-2-) 0 10 [-1]
+ 612 1 cent
+newp
+90 -45 moveto
+(Helvetica) ( ) 0 10 [ 0.00 0.00 0.00  ] 
+(Helvetica) (messages always seem to be written to the standard error device.) 0 10 [ 0.00 0.00 0.00  ] 
+2 splat
+90 -59 moveto
+(Helvetica-bold) (Transmission Mode) 0 12 [ -1 ] 
+1 splat
+90 -72 moveto
+(Helvetica) (When a packet is received gobbler will take one of three actions on the packet depending on) 0 10 [ -1 ] 
+ 1 414 16 just
+90 -84 moveto
+(Helvetica) ( \(return packet to) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( rts) 0 10 [ -1 ] 
+(Helvetica) ( field. Values may be) 0 10 [ -1 ] 
+(Helvetica-bold) ( xmit_type) 0 10 [ -1 ] 
+(Helvetica) (the mode which is supplied by the) 0 10 [ -1 ] 
+ 5 414 15 just
+90 -96 moveto
+(Helvetica-Oblique) ( drop.) 0 10 [ -1 ] 
+(Helvetica) ( \(send packet to the MAC address listed in the downstream field\),) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( forward) 0 10 [ -1 ] 
+(Helvetica) (sender\),) 0 10 [ -1 ] 
+4 splat
+90 -122 moveto
+(Helvetica-bold) (Receive Devices) 0 12 [ -1 ] 
+1 splat
+90 -134 moveto
+(Helvetica) ( field is an array of PCI device addresses which gobber is expected to configure) 0 10 [ -1 ] 
+(Helvetica-bold) ( rx-devs) 0 10 [ -1 ] 
+(Helvetica) (The) 0 10 [ -1 ] 
+ 3 414 15 just
+90 -146 moveto
+(Helvetica) (and use to receive packets. Gobbler will abort if it is not possible to use all of the named) 0 10 [ -1 ] 
+ 1 414 18 just
+90 -158 moveto
+(Helvetica) (devices for reception.) 0 10 [ -1 ] 
+1 splat
+90 -184 moveto
+(Helvetica-bold) (Duplicating Tx onto Rx devices) 0 12 [ -1 ] 
+1 splat
+90 -196 moveto
+(Helvetica) ( boolean field causes the Tx devices to be duplicated using the PCI) 0 10 [ -1 ] 
+(Helvetica-bold) ( duprx2tx) 0 10 [ -1 ] 
+(Helvetica) ( the) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( true,) 0 10 [ -1 ] 
+(Helvetica) (When) 0 10 [ -1 ] 
+ 5 414 15 just
+90 -208 moveto
+(Helvetica) ( field. This allows the PCI addresses in the tx_devs information) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( rx_devs) 0 10 [ -1 ] 
+(Helvetica) (addresses set in the) 0 10 [ -1 ] 
+ 3 414 14 just
+90 -220 moveto
+(Helvetica) ( the Tx devices are different than the Rx devices) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( false,) 0 10 [ -1 ] 
+(Helvetica) (to be omitted \(see below\). When set to) 0 10 [ -1 ] 
+ 3 414 17 just
+90 -232 moveto
+(Helvetica) (and their PCI addresses must be specified.) 0 10 [ -1 ] 
+1 splat
+90 -256 moveto
+(Helvetica) ( array must be zero, or must exactly match) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( tx_devs) 0 10 [ -1 ] 
+(Helvetica) (In this mode the devices supplied in the) 0 10 [ -1 ] 
+ 3 414 16 just
+90 -268 moveto
+(Helvetica) ( array.) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( rx_devs) 0 10 [ -1 ] 
+(Helvetica) (the number supplied in the) 0 10 [ -1 ] 
+3 splat
+90 -294 moveto
+(Helvetica-bold) (Transmission Devices) 0 12 [ -1 ] 
+1 splat
+90 -306 moveto
+(Helvetica) ( field supplies an array of transmission device information. As gobbler reads) 0 10 [ -1 ] 
+(Helvetica-bold) ( tx_devs) 0 10 [ -1 ] 
+(Helvetica) (The) 0 10 [ -1 ] 
+ 3 414 12 just
+90 -318 moveto
+(Helvetica) (batches of packets from the Rx devices it selects the next Tx device in turn to use for) 0 10 [ -1 ] 
+ 1 414 17 just
+90 -330 moveto
+(Helvetica) (transmitting the batch. The array contains objects which specify the PCI address, and arrays) 0 10 [ -1 ] 
+ 1 414 13 just
+90 -342 moveto
+(Helvetica) (of MAC addresses and VLAN IDs.) 0 10 [ -1 ] 
+1 splat
+90 -366 moveto
+(Helvetica-Oblique) () 0 10 [ -1 ] 
+(Helvetica) ( field is set to) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( duprx2tx) 0 10 [ -1 ] 
+(Helvetica) (The PCI address will be ignored, and is usually set to "dup," when the) 0 10 [ -1 ] 
+ 4 414 18 just
+90 -378 moveto
+(Helvetica) ( the arrays of VLAN IDs and MAC addresses) 0 10 [ -1 ] 
+(Helvetica-bold) ( forward,) 0 10 [ -1 ] 
+(Helvetica) ( is set to) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( xmit_type) 0 10 [ -1 ] 
+(Helvetica) ( When the field) 0 10 [ -1 ] 
+(Helvetica-Oblique) (true.) 0 10 [ -1 ] 
+ 6 414 16 just
+90 -390 moveto
+(Helvetica) (are used to force different values into packets as they are transmitted. The MAC array is also) 0 10 [ -1 ] 
+ 1 414 16 just
+90 -402 moveto
+(Helvetica) ( but in this mode the original VLAN ID is left in the packet) 0 10 [ -1 ] 
+(Helvetica-bold) ( rts,) 0 10 [ -1 ] 
+(Helvetica) ( is set to) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( xmit_type) 0 10 [ -1 ] 
+(Helvetica) (used when) 0 10 [ -1 ] 
+ 5 414 19 just
+90 -414 moveto
+(Helvetica) (when it is returned. With each packet transmitted the next address/ID from each list is placed) 0 10 [ -1 ] 
+ 1 414 15 just
+90 -426 moveto
+(Helvetica) (into the packet which allows for testing with a series of addresses/IDs when needed \(spoof) 0 10 [ -1 ] 
+ 1 414 14 just
+90 -438 moveto
+(Helvetica) (checking etc.\).) 0 10 [ -1 ] 
+1 splat
+90 -462 moveto
+(Helvetica) (If a MAC address is left as the empty string \(e.g. ""\), the MAC address for the device is used.) 0 10 [ -1 ] 
+1 splat
+90 -488 moveto
+(Helvetica-bold) (Downstream MAC) 0 12 [ -1 ] 
+1 splat
+90 -500 moveto
+(Helvetica) ( address is the destination mack address given to all forwarded) 0 10 [ -1 ] 
+(Helvetica-bold) ( downstream_mac) 0 10 [ -1 ] 
+(Helvetica) (The) 0 10 [ -1 ] 
+ 3 414 11 just
+90 -512 moveto
+(Helvetica) ( this field value is ignored.) 0 10 [ -1 ] 
+(Helvetica-Oblique) ( rts,) 0 10 [ -1 ] 
+(Helvetica) (packets. When the mode is) 0 10 [ -1 ] 
+3 splat
+90 -538 moveto
+(Helvetica-bold) (Downstream, Default, VLAN ID) 0 12 [ -1 ] 
+1 splat
+90 -550 moveto
+(Helvetica) ( field provides the VLAN ID which is inserted into packes which are forwarded) 0 10 [ -1 ] 
+(Helvetica-bold) ( ds_vlanid) 0 10 [ -1 ] 
+(Helvetica) (The) 0 10 [ -1 ] 
+ 3 414 14 just
+90 -562 moveto
+(Helvetica) (to the downstream MAC address. This value is overridden by VLAN IDs supplied for a Tx) 0 10 [ -1 ] 
+ 1 414 15 just
+90 -574 moveto
+(Helvetica) (device, and thus is used as the default when there is no array given.) 0 10 [ -1 ] 
+1 splat
+90 -598 moveto
+(Helvetica) (If this value is set to 0, then gobbler assumes that VLAN IDs are being stripped from the) 0 10 [ -1 ] 
+ 1 414 17 just
+90 -610 moveto
+(Helvetica) (packets and gobbler will NOT attempt to insert a VLAN ID into any packet on transmission.) 0 10 [ -1 ] 
+1 splat
+90 -636 moveto
+(Helvetica-bold) (Other Parameters) 0 12 [ -1 ] 
+1 splat
+90 -648 moveto
+(Helvetica) (The other parameters in the configuration file should be fairly obvious and are briefly) 0 10 [ -1 ] 
+ 1 414 13 just
+90 -660 moveto
+(Helvetica) (described below.) 0 10 [ -1 ] 
+1 splat
+126 -690 moveto
+(&bold_font) (mbufs) 0 10 [ -1 ] 
+1 splat
+198 -690 moveto
+(Helvetica) (The number of message buffers that gobbler allocates for packet) 0 10 [ -1 ] 
+ 1 288 9 just
+198 -702 moveto
+(Helvetica) (processing.) 0 10 [ -1 ] 
 1 splat
 (Helvetica) findfont 10 scalefont setfont
-277 -737   (-1-) rightxy
+0 -747 moveto
+ (Times-roman) (-3-) 0 10 [-1]
+ 612 1 cent
+newp
+126 -45 moveto
+(&bold_font) ( ) 0 10 [ 0.00 0.00 0.00  ] 
+(&bold_font) (rx_des) 0 10 [ 0.00 0.00 0.00  ] 
+2 splat
+198 -45 moveto
+(Helvetica) (The number of receive descriptors allocated.) 0 10 [ -1 ] 
+1 splat
+126 -69 moveto
+(&bold_font) (tx_des) 0 10 [ -1 ] 
+1 splat
+198 -69 moveto
+(Helvetica) (The number of transmit descriptors allocated.) 0 10 [ -1 ] 
+1 splat
+126 -93 moveto
+(&bold_font) (mtu) 0 10 [ -1 ] 
+1 splat
+198 -93 moveto
+(Helvetica) (The MTU size that gobbler will attempt to set on each device.) 0 10 [ -1 ] 
+1 splat
+126 -117 moveto
+(&bold_font) (cpu_mask) 0 10 [ -1 ] 
+1 splat
+198 -117 moveto
+(Helvetica) (The MASK of CPUs that gobbler will attempt to use \(must) 0 10 [ -1 ] 
+ 1 288 10 just
+198 -129 moveto
+(Helvetica) (include CPUs which are NUMA aligned with the NICs.) 0 10 [ -1 ] 
+1 splat
+126 -153 moveto
+(&bold_font) (lock_name) 0 10 [ -1 ] 
+1 splat
+198 -153 moveto
+(Helvetica) (The process duplication prevention lock name \(DPDK\).) 0 10 [ -1 ] 
+1 splat
+126 -177 moveto
+(&bold_font) (mem_chans) 0 10 [ -1 ] 
+1 splat
+198 -177 moveto
+(Helvetica) (The number of memory channels supported on the host.) 0 10 [ -1 ] 
+1 splat
+126 -201 moveto
+(&bold_font) (huge_pages) 0 10 [ -1 ] 
+1 splat
+198 -201 moveto
+(Helvetica) (If false, huge pages are used \(this must usually be true or odd) 0 10 [ -1 ] 
+ 1 288 12 just
+198 -213 moveto
+(Helvetica) (results happen\).) 0 10 [ -1 ] 
+1 splat
+126 -237 moveto
+(&bold_font) (promiscuous) 0 10 [ -1 ] 
+1 splat
+198 -237 moveto
+(Helvetica) (If true, gobbler will set promiscuous mode on the device\(s\).) 0 10 [ -1 ] 
+1 splat
+gsave 0 setlinewidth 90 -277 moveto 558 -277 lineto stroke grestore
+90 -293 moveto
+(Helvetica) (Formatted on 31 January 2018 using pfm V2.8/17243) 0 10 [ -1 ] 
+1 splat
+(Helvetica) findfont 10 scalefont setfont
+0 -747 moveto
+ (Times-roman) (-4-) 0 10 [-1]
+ 612 1 cent
 newp
