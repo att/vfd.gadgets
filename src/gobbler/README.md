@@ -215,7 +215,7 @@ NOT attempt to insert a VLAN ID into any packet on
 transmission. 
  
  
-### Ohter Parameters 
+### Other Parameters 
 The other parameters in the configuration file should be 
 fairly obvious and are briefly described below. 
  
@@ -245,6 +245,8 @@ usually be true or odd results happen).
  
 **promiscuous:** If true, gobbler will set promiscuous mode 
 on the device(s). 
+ 
+ 
  
 ___________________________________________________________
 Formatted on 31 January 2018 using tfm V2.2/0a266 
