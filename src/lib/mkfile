@@ -12,7 +12,7 @@ binaries = jwrapper_test bleat_test fifo_test
 %.o: %.c
 	$cc $cflags -c $prereq
 
-all:V: libgadget.a
+all:V: jsmn libgadget.a
 
 
 lib = libgadget.a
