@@ -184,6 +184,37 @@ static int dig_string_array( void* jblob, char const* array_name, char*** target
 	return 0;
 }
 
+
+
+/*
+	Dig out the white-mac array and create the array in the config.
+*/
+static int dig_white_macs( void* jblob, config_t* config ) {
+	unsigned char**	macs;			// list of mac addresses from the json
+	int		nmacs;			// number
+	int		i;
+
+	nmacs = dig_string_array( jblob, "white_macs", (char ***) &macs );
+	if( nmacs <= 0 ) {
+		bleat_printf( 1, "no white list mac addresses found in config; will generate random addresses" );
+		return 0;
+	}
+
+	if( (config->white_macs = (struct ether_addr *) malloc( sizeof( struct ether_addr ) * nmacs )) == NULL )  {
+		bleat_printf( 0, "CRI: unable to allocate mac white list for %d macs", nmacs );
+		return 0;
+	}
+
+	bleat_printf( 1, "%d white list mac addresses found in config", nmacs );
+	for( i = 0; i < nmacs; i++ ) {
+		macstr2buf( macs[i], (unsigned char *) &config->white_macs[i] );
+		free( macs[i] );	
+	}
+
+	free( macs );
+	return nmacs;
+}
+
 /*
 	Dig out the vlan set and the device names associated with the Tx devices.
 	The return is two pointers: [0]->device name array, [1]->vlan_set_t and 
@@ -299,13 +330,15 @@ static  void* dig_tx_info( void* config ) {
 			pid_fname:		<string>,
 			cpu_mask:		<value|string>,		# can be a string like "0x0a" or just integer like 10
 
-			gen_macs:		<boolean>,			# if true then we generate a few whitelist mac addresses
+			gen_macs:		<boolean>,				# if true then we generate a few whitelist mac addresses
+			white_macs:		[ "m1", ..., "mn" ],	# generated macs if gen_macs true; random if list is omitted
+
 			mem_chans:		<value>,
 			huge_pages:		<boolean>,			# testing only; default is true
 			tot_mem:		<value>,			# total dpdk memory to allocate for the rpocess
 
 			#---- network interfaces -----------
-			rx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should listen to
+			rx_devs:		[ <string>[,...] ]				# one or more device names (PCI addrs) that we should listen to
 			//deprecated tx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should transmit on
 			tx_devs: 		[
 					{
@@ -390,6 +423,7 @@ extern config_t* read_config( char const* fname ) {
 			config->flags &= ~CF_GEN_MACS;
 		} else {
 			config->flags |= CF_GEN_MACS;
+			config->nwhite_macs = dig_white_macs( jblob, config );							// if on, see if there are any macs supplied and capture them 
 		}
 
 		if( get_bool( jblob, "huge_pages", TRUE ) == FALSE ) {
@@ -483,6 +517,7 @@ extern void free_config( config_t* config ) {
 
 	SFREE( config->tx_ports );
 	SFREE( config->rx_ports );
+	SFREE( config->white_macs );
 
 	for( i = 0; i < config->ntx_devs; i++ ) {
 		// do NOT free vsets or msets as those pointers are passed out of the config for use later

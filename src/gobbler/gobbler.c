@@ -318,33 +318,50 @@ static inline void flush_full_if( iface_t* iface, uint64_t* txcounter, uint64_t*
 // -------------- specific testing things ----------------------------------------------
 
 /* 
-	This code shoves a bunch of MAC addresses on to the port. We attempt to add more than the VF
-	can support so only the first 63 should be allowed since we likely stuck one in from the 
-	VF config file.
+	Generate a bunch of 'white list' MAC addresses that should be added to the NIC via
+	set macvlan callbacks. If the white list is empty, we'll generate a few random ones
+	otherwise we'll generate the ones in the list.
 */
-static void gen_whitelist_macs( void ) {
+static void gen_whitelist_macs( struct ether_addr* mlist, int nmacs ) {
 	struct ether_addr ma;
 	int mai;
 	int mais;
+	char*	s;				// printable mac address
 
-	bleat_printf( 1, "hacking in mac addresses" );
 
-	ma.addr_bytes[0] = 0xea;		// all with the same silly 'base'
-	ma.addr_bytes[1] = 0xea;
-	ma.addr_bytes[2] = 0xea;
-	ma.addr_bytes[3] = 0xea;
-	ma.addr_bytes[4] = 0xea;
-	ma.addr_bytes[5] = 0;
-
-	for( mai = 0; mai < 7; mai++ ) {
-		if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
-			bleat_printf( 0, ">>>> add mac fails for %d with error %d", mai, mais );
-			break;
-		} else {
-			bleat_printf( 0, ">>>> add mac OK for ea:ea:ea:ea:ea:%02x", mai );
+	if( mlist == NULL ) {
+		bleat_printf( 1, "adding random white list MAC addresses" );
+		ma.addr_bytes[0] = 0xea;		// all with the same silly 'base'
+		ma.addr_bytes[1] = 0xea;
+		ma.addr_bytes[2] = 0xea;
+		ma.addr_bytes[3] = 0xea;
+		ma.addr_bytes[4] = 0xea;
+		ma.addr_bytes[5] = 0;
+	
+		for( mai = 0; mai < 7; mai++ ) {
+			if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
+				bleat_printf( 0, ">>>> add random whitelist mac fails for %d with error %d", mai, mais );
+				break;
+			} else {
+				bleat_printf( 0, ">>>> add random whitelist mac OK for ea:ea:ea:ea:ea:%02x", mai );
+			}
+	
+			ma.addr_bytes[5]++;
 		}
+	} else {
+		bleat_printf( 1, "adding %d user supplied white list MAC addresses", nmacs );
+		for( mai = 0; mai < nmacs; mai++ ) {
 
-		ma.addr_bytes[5]++;
+			if( (mais = rte_eth_dev_mac_addr_add( 0, &mlist[mai], 0 ) ) < 0 ) {
+				bleat_printf( 0, ">>>> add whitelist mac fails for %d with error %d", mai, mais );
+				break;
+			} else {
+				s = mac_to_string( &mlist[mai] );
+				bleat_printf( 0, ">>>> add whitelist mac OK for %s", s );
+				free( s );
+			}
+		
+		}
 	}
 }
 
@@ -406,6 +423,8 @@ static int gobble( void* vctx ) {
 	bleat_printf( 1, "xmit type: %d", ctx->xmit_type );
 
 	while( ok2run ) {
+		const_str	stripped = "";		// diagnostic (dump) flags inidicating state of packet received (vlan stripped, vlan tagged)
+		const_str	vlan = "";
 		int64_t state;
 
 		this_clock = rte_rdtsc();
@@ -436,7 +455,14 @@ static int gobble( void* vctx ) {
 
 				if( unlikely( ctx->dump_size ) ) {
 					for( i = 0; i < npkts; i++ ) {
-						bleat_printf( 1, "if=%d xmit=%d pkt %d of %d len=%d first %d bytes", j, ctx->xmit_type,  i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), ctx->dump_size );
+						stripped = vlan = "f";
+						if( pkts[i]->ol_flags & PKT_RX_VLAN ) {
+							vlan = "T";
+						}
+						if( pkts[i]->ol_flags & PKT_RX_VLAN_STRIPPED ) {
+							stripped = "T";
+						}
+						bleat_printf( 1, "if=%d xmit=%d pkt %d of %d len=%d stripped=%s vlan=%s first %d bytes", j, ctx->xmit_type,  i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), stripped, vlan, ctx->dump_size );
 						dump_octs( rte_pktmbuf_mtod( pkts[i], unsigned const char*), ctx->dump_size > 1 ? (int) ctx->dump_size : (int)  rte_pktmbuf_pkt_len( pkts[i] ) );
 					}
 				}
@@ -559,6 +585,7 @@ int main( int argc, char** argv ) {
 	int state;
 	unsigned lcore_id;
 
+
 	cfg = crack_args( argc, argv, "./gobbler.cfg" );			// crack the command line args, parse the config to build a config struct
 	if( cfg == NULL ) {
 		fprintf( stderr, "abort: internal mishap: unable to build a config struct\n" );
@@ -584,7 +611,7 @@ int main( int argc, char** argv ) {
 
 	bleat_printf( 1, "gobbler started: v3.0/17731" );
 	bleat_printf( 1, version );	
-	bleat_printf( 1, "config flags =%02x", cfg->flags );
+	bleat_printf( 1, "config flags = 0x%02x", cfg->flags );
 
 	if( getuid() != 0 || geteuid() != 0 ) {
 		bleat_printf( 0, "CRI: process must be run as root (0) or suid root and is not" );
@@ -624,8 +651,8 @@ int main( int argc, char** argv ) {
 		rte_exit( EXIT_FAILURE, "CRI: interface start malfunction\n" );
 	}
 
-	if( cfg->flags & CF_GEN_MACS ) {		// generate a few white list mac addresses to test macvlan stuff in vfd
-		gen_whitelist_macs( );
+	if( cfg->flags & CF_GEN_MACS ) {							// generate macs from the white list or random ones
+		gen_whitelist_macs( cfg->white_macs, cfg->nwhite_macs );
 	}
 	
 	// -------------- end hack --------------------------------------------------------------------------

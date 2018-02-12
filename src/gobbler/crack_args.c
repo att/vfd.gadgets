@@ -18,6 +18,7 @@
 #include <string.h>
 #include <rte_version.h>
 
+#include <gadgetlib.h>
 #include "gobbler.h"
 
 /*
@@ -28,11 +29,12 @@ static void usage( void ) {
 
 	fprintf( stdout, "gobbler version %s\n", version );
 	fprintf( stdout, "based on: %s %d.%d%s.%d\n\n", RTE_VER_PREFIX, RTE_VER_YEAR,  RTE_VER_MONTH, RTE_VER_SUFFIX,  RTE_VER_RELEASE );
-	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-i] [-n] [-?]\n" );
+	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-i] [-n] [-v] [-?]\n" );
 	fprintf( stdout, "\t-c file - supplies the name of the file to read as the configuration; ./gobbler.cfg assumed if missing\n" );
 	fprintf( stdout, "\t-d n    - dump first n bytes of each received packet\n" );
 	fprintf( stdout, "\t-i      - interactive mode; prevents process from detaching the tty\n" );
 	fprintf( stdout, "\t-n      - no harm mode; won't be distructive though exactly what that means is not defined\n" );
+	fprintf( stdout, "\t-v      - turn on extra logging during config file processing\n" );
 	fprintf( stdout, "\t-?      - display usage\n" );
 }
 
@@ -98,6 +100,10 @@ extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 
 				case 'c':
 					cfg_fname = get_nxt( argc, argv, &parg );	// get parm and inc parg
+					break;
+
+				case 'v':
+					bleat_set_lvl( 2 );
 					break;
 
 				case '?':
