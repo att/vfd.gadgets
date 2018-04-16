@@ -75,16 +75,32 @@
 
 static const struct rte_eth_conf default_port_conf = {
 	.rxmode = {
-		.split_hdr_size = 0,
+		/*
+		// these are replaced by offload flags below
 		.header_split   = 0, 		// Header Split disabled
 		.hw_ip_checksum = 0, 		// IP checksum offload disabled
 		.hw_vlan_filter = 0, 		// VLAN filtering disabled
-		.max_rx_pkt_len	= 1500,		// can be overridden by mk_iface()
+		.hw_vlan_strip = 1, 		// VLAN stripping enabled
 		.jumbo_frame    = 0, 		// disabled; can be changed in mk_iface()
-		.hw_strip_crc   = 0, 		// CRC stripped by hardware
+		.hw_strip_crc   = 1, 		// CRC stripped by hardware
+		*/
+
+		.header_split   = 0, 		// zero these while they exist in transition
+		.hw_ip_checksum = 0,
+		.hw_vlan_filter = 0,
+		.hw_vlan_strip = 0,
+		.jumbo_frame    = 0,
+		.hw_strip_crc   = 0,
+
+		.split_hdr_size = 0,
+		.max_rx_pkt_len	= ETHER_MAX_LEN,		// can be overridden by mk_iface()
+
+		.ignore_offload_bitfield = 1,	// dpdk transition requirement
+		.offloads = (DEV_RX_OFFLOAD_CRC_STRIP | DEV_RX_OFFLOAD_VLAN_STRIP | DEV_RX_OFFLOAD_CHECKSUM | DEV_RX_OFFLOAD_VLAN_EXTEND),
 	},
 	.txmode = {
 		.mq_mode = ETH_MQ_TX_NONE,
+		.offloads = (DEV_TX_OFFLOAD_VLAN_INSERT | DEV_TX_OFFLOAD_IPV4_CKSUM ),
 	},
 };
 
@@ -185,6 +201,7 @@ typedef struct config {
 	int		log_level;				// our log verbosity level
 	int		dpdk_log_level;			// dpdk log level
 	int		init_lldelta;			// log level delta during initialisation
+	int		expand_pkt_vlan;		// internally expand and add vlan (don't depend on hw)
 
 	int		ds_vlanid;				// downstream vlan ID
 	char*	downstream_mac;			// mac which will receive packets forwarded on the ext net
@@ -207,6 +224,7 @@ typedef struct config {
 	int		tx_des;	
 	char*	lock_name;				// name used to prevent duplicate procesess (dpdk --file-prefix parm)
 
+	char*	sim_id;					// id for a simulation
 	// these are populated at run time or only from command line
 	int		nports;					// number of ports reported by hardware/dpdk
 	int*	rx_port_map;			// port maps filled in by comparing tx/rx_devs to rte info at runtime
@@ -272,5 +290,6 @@ extern uint32_t ipv42int( unsigned char const* ip_str );
 extern unsigned char* macstr2buf( unsigned char const* mac_str, unsigned char* target_buf );
 extern char* mac_to_string( struct ether_addr const*  mac_addr );
 extern int get_next_core( int start );
+extern int run_sim( context_t* ctx, char* sim_id );
 
 #endif

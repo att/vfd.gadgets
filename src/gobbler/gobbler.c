@@ -106,6 +106,7 @@
 // --- a few globals --------------------------------------------------------------
 const char *version = VERSION "    build: " __DATE__ " " __TIME__;
 int ok2run = 1;
+int	expand_pkt_for_vlan = 0;		// in some instances we need to to the vlan insert as hardware doesn't seem to want to
 
 // --------------------------------------------------------------------------------
 
@@ -188,24 +189,43 @@ static inline void swap_mac_addrs( iface_t* tcif, struct rte_mbuf *mb ) {
 static inline void insert_vlan( struct ether_hdr* eth_hdr, uint16_t vlan  ) {
 	struct vlan_hdr* vh;
 
-	if( eth_hdr->ether_type == rte_cpu_to_be_16( ETH_PROTO_VLAN ) ) {		// must flip const as 8100 is reversed on read from buffer
+	//dump_octs( (unsigned const char*) eth_hdr, 32 );
+	if( eth_hdr->ether_type == rte_cpu_to_be_16( ETH_PROTO_VLAN ) ) {			// must flip const as 8100 is reversed on read from buffer
 		vh = (struct vlan_hdr*) &eth_hdr->ether_type;							// 'overlay' ty/proto with vlan struct
 		//vh->vlan_tci =  rte_cpu_to_be_16( vlan );
 		vh->eth_proto =  rte_cpu_to_be_16( vlan );
+	} else {
+		eth_hdr->ether_type =  rte_cpu_to_be_16( ETH_PROTO_VLAN );
+		vh = (struct vlan_hdr*) &eth_hdr->ether_type;							// 'overlay' ty/proto with vlan struct
+		vh->eth_proto =  rte_cpu_to_be_16( vlan );
 	}
+
+	//dump_octs( (unsigned const char*) eth_hdr, 32 );
 }
 
 /*
-	push mac addresses and the vlanid
+	push mac addresses and the vlan id
 */
 static inline void push_mac_vlan( struct rte_mbuf *mb, struct ether_addr const* dst_addr, struct ether_addr const* src_addr, uint16_t vlan  ) {
 	struct ether_hdr *eth;									// ethernet header in the mbuf
 
-	eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );		// @header (this is a bleeding macro; why is it not caps? DPDK fail)
+
+	eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );						// @header 
+	if( (mb->ol_flags & PKT_RX_VLAN_STRIPPED) && (mb->vlan_tci == 0) ) {	// if tci is 0, the vlan wasn't removed from the buffer even if strip flag is true
+		insert_vlan( eth, vlan );											// so we can just put desired value into the packet as is
+	} else {
+		mb->ol_flags = PKT_TX_IPV4 |  PKT_TX_IP_CKSUM |  PKT_TX_VLAN;		// packet is VLAN and tci should be added by hardware
+		mb->vlan_tci = vlan;
+
+		if( expand_pkt_for_vlan ) {				// no hardware support, pop on additional space out front and add ourselves
+			rte_pktmbuf_prepend( mb, 4 );
+			eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );					// @header (this is a bleeding macro; why is it not caps? DPDK fail)
+			insert_vlan( eth, vlan );
+		}
+	}
 
 	ether_addr_copy( dst_addr, &eth->d_addr);
 	ether_addr_copy( src_addr, &eth->s_addr);
-	insert_vlan( eth, vlan );
 }
 
 /*
@@ -340,10 +360,10 @@ static void gen_whitelist_macs( struct ether_addr* mlist, int nmacs ) {
 	
 		for( mai = 0; mai < 7; mai++ ) {
 			if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
-				bleat_printf( 0, ">>>> add random whitelist mac fails for %d with error %d", mai, mais );
+				bleat_printf( 0, "### ERR ### add random whitelist mac fails for %d with error %d", mai, mais );
 				break;
 			} else {
-				bleat_printf( 0, ">>>> add random whitelist mac OK for ea:ea:ea:ea:ea:%02x", mai );
+				bleat_printf( 0, "add random whitelist mac OK for ea:ea:ea:ea:ea:%02x", mai );
 			}
 	
 			ma.addr_bytes[5]++;
@@ -353,11 +373,11 @@ static void gen_whitelist_macs( struct ether_addr* mlist, int nmacs ) {
 		for( mai = 0; mai < nmacs; mai++ ) {
 
 			if( (mais = rte_eth_dev_mac_addr_add( 0, &mlist[mai], 0 ) ) < 0 ) {
-				bleat_printf( 0, ">>>> add whitelist mac fails for %d with error %d", mai, mais );
+				bleat_printf( 0, "### ERR ### add whitelist mac fails for %d with error %d", mai, mais );
 				break;
 			} else {
 				s = mac_to_string( &mlist[mai] );
-				bleat_printf( 0, ">>>> add whitelist mac OK for %s", s );
+				bleat_printf( 0, "add whitelist mac OK for %s", s );
 				free( s );
 			}
 		
@@ -462,7 +482,8 @@ static int gobble( void* vctx ) {
 						if( pkts[i]->ol_flags & PKT_RX_VLAN_STRIPPED ) {
 							stripped = "T";
 						}
-						bleat_printf( 1, "if=%d xmit=%d pkt %d of %d len=%d stripped=%s vlan=%s first %d bytes", j, ctx->xmit_type,  i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), stripped, vlan, ctx->dump_size );
+						bleat_printf( 1, "if=%d xmit=%d pkt %d of %d len=%d stripped=%s vlan=%s tci=%d ol_flags=0x%04x first %d bytes", 
+							j, ctx->xmit_type,  i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), stripped, vlan, pkts[i]->vlan_tci, pkts[i]->ol_flags, ctx->dump_size );
 						dump_octs( rte_pktmbuf_mtod( pkts[i], unsigned const char*), ctx->dump_size > 1 ? (int) ctx->dump_size : (int)  rte_pktmbuf_pkt_len( pkts[i] ) );
 					}
 				}
@@ -592,6 +613,9 @@ int main( int argc, char** argv ) {
 		exit( 1 );
 	}
 
+	if( cfg->expand_pkt_vlan ) {
+		expand_pkt_for_vlan = 1;
+	}
 
 	bleat_set_lvl( cfg->log_level + cfg->init_lldelta );
 	if( cfg->flags & CF_ASYNC  ) {
@@ -599,8 +623,7 @@ int main( int argc, char** argv ) {
 		daemonise( cfg->pid_fname );
 	}
 
-
-	if( strcmp( cfg->log_file, "stderr" ) ) {						// switch if not stderr
+	if( strcmp( cfg->log_file, "stderr" ) != 0 ) {						// switch if not stderr
 		bleat_printf( 1, "setting log to: %s", cfg->log_file );
 		bleat_set_log( cfg->log_file, 86400 );						// open bleat log with a date suffix after we daemonise so it doesn't close the fd
 		if( cfg->log_keep > 0 ) {									// set days to keep log files
@@ -609,7 +632,7 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	bleat_printf( 1, "gobbler started: v3.0/17731" );
+	bleat_printf( 1, "gobbler started: v3.1/18226" );
 	bleat_printf( 1, version );	
 	bleat_printf( 1, "config flags = 0x%02x", cfg->flags );
 
@@ -655,7 +678,11 @@ int main( int argc, char** argv ) {
 		gen_whitelist_macs( cfg->white_macs, cfg->nwhite_macs );
 	}
 	
-	// -------------- end hack --------------------------------------------------------------------------
+	if( cfg->sim_id != NULL ) {
+		state = run_sim( ctx, cfg->sim_id );					// simulation requested, run and exit
+		stop_all( ctx );
+		return state;
+	}
 
 	bleat_printf( 1, "letting the jelly stop wiggling..." );
 	if( ! all_links_up( ctx, 20 ) ) {							// wait up to 20 seconds for all the links to show in up state

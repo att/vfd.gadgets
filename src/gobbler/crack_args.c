@@ -29,11 +29,13 @@ static void usage( void ) {
 
 	fprintf( stdout, "gobbler version %s\n", version );
 	fprintf( stdout, "based on: %s %d.%d%s.%d\n\n", RTE_VER_PREFIX, RTE_VER_YEAR,  RTE_VER_MONTH, RTE_VER_SUFFIX,  RTE_VER_RELEASE );
-	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-i] [-n] [-v] [-?]\n" );
+	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-e] [-i] [-n] [-v] [-?]\n" );
 	fprintf( stdout, "\t-c file - supplies the name of the file to read as the configuration; ./gobbler.cfg assumed if missing\n" );
 	fprintf( stdout, "\t-d n    - dump first n bytes of each received packet\n" );
+	fprintf( stdout, "\t-e      - expand packet for vlan insertion internally (don't depend on hardware)\n" );
 	fprintf( stdout, "\t-i      - interactive mode; prevents process from detaching the tty\n" );
 	fprintf( stdout, "\t-n      - no harm mode; won't be distructive though exactly what that means is not defined\n" );
+	fprintf( stdout, "\t-s id   - run in simulation mode. 'id' is what to simulate: { linkstat | ??? } " );
 	fprintf( stdout, "\t-v      - turn on extra logging during config file processing\n" );
 	fprintf( stdout, "\t-?      - display usage\n" );
 }
@@ -73,6 +75,8 @@ extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 	char*	str;				// pointer to string that needs to be atoi'd
 	int		flags;
 	int		dump_size = 0;
+	char*	sim_id = NULL;		// -s id sets a simulation id string
+	int		cfg_expand_pkt = 0; // -e sets
 	
 	// we pull config from a file, not command line, so parse just the minimal things that 
 	// need to come from the command line. We'll build a 'dpdk parsable' argv/argc later 
@@ -90,6 +94,10 @@ extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 					dump_size = atoi( str );
 					break;
 
+				case 'e':
+					cfg_expand_pkt = 1;
+					break;
+
 				case 'i':					// interactive mode
 					async = 0;
 					break;
@@ -100,6 +108,10 @@ extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 
 				case 'c':
 					cfg_fname = get_nxt( argc, argv, &parg );	// get parm and inc parg
+					break;
+
+				case 's':
+					sim_id = get_nxt( argc, argv, &parg );	// get parm and inc parg
 					break;
 
 				case 'v':
@@ -136,6 +148,8 @@ extern config_t* crack_args( int argc, char** argv, char const* cfg_fname ) {
 	cfg->flags |= flags;
 
 	cfg->dump_size = dump_size;
+	cfg->sim_id = sim_id;
+	cfg->expand_pkt_vlan = cfg_expand_pkt;
 
 	return cfg;
 }
