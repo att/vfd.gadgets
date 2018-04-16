@@ -398,4 +398,44 @@ extern int get_next_core( int start ) {
 
 	return -1;
 }
+
+// -------- simulation: if -s xxx is passed in we simulate what ever xxx maps to
+// Generally return values from these functions are 1 for OK and 0 for failure.
+
+/*
+	Simulate pooly written application which over uses the check link
+	state with the wait option (causes lots of mailbox messages).
+	Will drive the call for 'loops' number of times.
+*/
+static int sim_bad_link_chk( iface_t* iface, int loops ) {
+	struct rte_eth_link link_info;				// link info back from rte
+
+	memset( &link_info, 0, sizeof( link_info ) );
+
+	bleat_printf( 1, "link_stat 'over use' simulation starts for %d loops", loops );
+	while( loops > 0 ) {
+		rte_eth_link_get( iface->portid, &link_info );
+		loops--;
+	}
+
+	bleat_printf( 1, "link_stat 'over use' simulation complete" );
+	return 1;
+}
+
+/*
+	
+	Figure out what simulation was asked for and if we recognise it
+	run it. Return value is the value that the function returns.
+*/
+extern int run_sim( context_t* ctx, char* sim_id ) {
+	if( sim_id == NULL ) {
+		return 0;
+	}
+
+	if( strcmp( sim_id, "link_stat" ) == 0 ) {
+		return sim_bad_link_chk( ctx->rx_ifs[0], 10000000 );
+	}
+
+	return 0;
+}
 #endif
