@@ -374,6 +374,7 @@ extern config_t* read_config( char const* fname ) {
 	}
 
 	if( *buf == 0 ) {											// empty/missing file
+		fprintf( stderr, "warning: unable to open or read: %s\n", fname );
 		free( buf );
 		buf = strdup( "{ \"empty\": true }" );					// dummy json to parse which will cause all defaults to be set
 	}
