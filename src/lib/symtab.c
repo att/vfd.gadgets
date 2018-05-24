@@ -425,7 +425,8 @@ void sym_foreach_class( void *vst, unsigned int class, void (* user_fun)( void*,
 			for( se = list[i]; se; se = next )		/* using next allows user to delet via this */
 			{
 				next = se->next;
-				if( class == se->class )
+				if( class == se->class ) {
 					user_fun( st, se, se->name, se->val, user_data );
+				}
 			}
 }

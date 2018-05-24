@@ -29,10 +29,10 @@ $lib:   ${lib_src:%=$lib(%.o)}
 
 
 # --------- tests ----------------------------------------------------
-jwrapper_test:: jwrapper_test.c vfdlib.h jwrapper.o symtab.o
+jwrapper_test:: jwrapper_test.c gadgetlib.h jwrapper.o symtab.o
 	$cc $cflags jwrapper_test.c  -o jwrapper_test jwrapper.o symtab.o $jsmn_lib
 
-jwrapper_test2:: jwrapper_test2.c vfdlib.h jwrapper.o symtab.o
+jwrapper_test2:: jwrapper_test2.c gadgetlib.h jwrapper.o symtab.o
 	$cc $cflags jwrapper_test2.c  -o jwrapper_test2 jwrapper.o symtab.o $jsmn_lib
 
 bleat_test::	bleat_test.c $lib

@@ -151,7 +151,7 @@ int main( int argc, char **argv ) {
 		if(  (value = jw_value( jblob, argv[2] )) ) {
 			fprintf( stderr, "found name (as a value): %s = (%0.2f)\n", argv[2], value );
 		} else {
-			fprintf( stderr, "failed to find name: %s\n", argv[2] );
+			fprintf( stderr, "failed to find name as a string or value: %s\n", argv[2] );
 		}
 	}
 
