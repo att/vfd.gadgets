@@ -29,6 +29,7 @@
 
 #include <rte_ip.h>
 #include <rte_pci.h>
+#include <rte_bus_pci.h>
 
 #include <gadgetlib.h>
 #include "gobbler.h"

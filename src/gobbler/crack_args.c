@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <rte_version.h>
 
 #include "gobbler.h"
 
@@ -26,6 +27,7 @@ static void usage( void ) {
 	const char *version = VERSION "    build: " __DATE__ " " __TIME__;
 
 	fprintf( stdout, "gobbler version %s\n", version );
+	fprintf( stdout, "based on: %s %d.%d%s.%d\n\n", RTE_VER_PREFIX, RTE_VER_YEAR,  RTE_VER_MONTH, RTE_VER_SUFFIX,  RTE_VER_RELEASE );
 	fprintf( stdout, "usage: gobbler [-c config-file] [-d dump_size]  [-i] [-n] [-?]\n" );
 	fprintf( stdout, "\t-c file - supplies the name of the file to read as the configuration; ./gobbler.cfg assumed if missing\n" );
 	fprintf( stdout, "\t-d n    - dump first n bytes of each received packet\n" );

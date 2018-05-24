@@ -89,6 +89,7 @@
 #include <rte_branch_prediction.h>
 #include <rte_interrupts.h>
 #include <rte_pci.h>
+#include <rte_bus_pci.h>
 #include <rte_random.h>
 #include <rte_debug.h>
 #include <rte_ether.h>
@@ -314,6 +315,39 @@ static inline void flush_full_if( iface_t* iface, uint64_t* txcounter, uint64_t*
 }
 
 
+// -------------- specific testing things ----------------------------------------------
+
+/* 
+	This code shoves a bunch of MAC addresses on to the port. We attempt to add more than the VF
+	can support so only the first 63 should be allowed since we likely stuck one in from the 
+	VF config file.
+*/
+static void gen_whitelist_macs( void ) {
+	struct ether_addr ma;
+	int mai;
+	int mais;
+
+	bleat_printf( 1, "hacking in mac addresses" );
+
+	ma.addr_bytes[0] = 0xea;		// all with the same silly 'base'
+	ma.addr_bytes[1] = 0xea;
+	ma.addr_bytes[2] = 0xea;
+	ma.addr_bytes[3] = 0xea;
+	ma.addr_bytes[4] = 0xea;
+	ma.addr_bytes[5] = 0;
+
+	for( mai = 0; mai < 7; mai++ ) {
+		if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
+			bleat_printf( 0, ">>>> add mac fails for %d with error %d", mai, mais );
+			break;
+		} else {
+			bleat_printf( 0, ">>>> add mac OK for ea:ea:ea:ea:ea:%02x", mai );
+		}
+
+		ma.addr_bytes[5]++;
+	}
+}
+
 // -------------- thread processing functions ------------------------------------------
 /*
 	Gobble up packets from the rx intefaces.  If one or more Tx interface(s) are in the
@@ -531,6 +565,7 @@ int main( int argc, char** argv ) {
 		exit( 1 );
 	}
 
+
 	bleat_set_lvl( cfg->log_level + cfg->init_lldelta );
 	if( cfg->flags & CF_ASYNC  ) {
 		bleat_printf( 3, "detaching from tty (daemonise)" );
@@ -549,6 +584,7 @@ int main( int argc, char** argv ) {
 
 	bleat_printf( 1, "gobbler started: v3.0/17731" );
 	bleat_printf( 1, version );	
+	bleat_printf( 1, "config flags =%02x", cfg->flags );
 
 	if( getuid() != 0 || geteuid() != 0 ) {
 		bleat_printf( 0, "CRI: process must be run as root (0) or suid root and is not" );
@@ -587,6 +623,12 @@ int main( int argc, char** argv ) {
 		bleat_printf( 1, "start ports failed" );
 		rte_exit( EXIT_FAILURE, "CRI: interface start malfunction\n" );
 	}
+
+	if( cfg->flags & CF_GEN_MACS ) {		// generate a few white list mac addresses to test macvlan stuff in vfd
+		gen_whitelist_macs( );
+	}
+	
+	// -------------- end hack --------------------------------------------------------------------------
 
 	bleat_printf( 1, "letting the jelly stop wiggling..." );
 	if( ! all_links_up( ctx, 20 ) ) {							// wait up to 20 seconds for all the links to show in up state
