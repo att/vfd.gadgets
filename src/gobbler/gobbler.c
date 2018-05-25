@@ -162,16 +162,16 @@ static inline void push_mac_addrs( struct rte_mbuf *mb, struct ether_addr const*
 	Swap the dest/src mac addresses to return the traffic to the sender.
 	If tcif is not nil, we look to see if the dest mac is a multicast packet and if it is
 	we put the mac address from the interface in rather than swapping them. We make broad
-	assumptions about what is broa/mulitcast.  We assume any mac address starting with 0x01 
-	is multicast (we don't validate the range), and that any mac starting with 0xff is 
+	assumptions about what is broad/mulitcast.  We assume any mac address having the 0x01 
+	bit is multicast (we don't validate the range), and that any mac starting with 0xff is 
 	broascast (we don't manage a netmask).
 */
 static inline void swap_mac_addrs( iface_t* tcif, struct rte_mbuf *mb ) {
 	struct ether_hdr *eth;									// ethernet header in the mbuf
 	struct ether_addr tmp;
 
-	eth = rte_pktmbuf_mtod( mb, struct ether_hdr *);		// @header (this is a bleeding macro; why is it not caps? DPDK fail)
-	if( likely( tcif != NULL ) && (eth->d_addr.addr_bytes[0] == 0x01 ||  eth->d_addr.addr_bytes[0] == 0xff) ) {	 //multicast or broadcast address
+	eth = rte_pktmbuf_mtod( mb, struct ether_hdr *);
+	if( likely( tcif != NULL ) && (eth->d_addr.addr_bytes[0] & 0x01 ) ) {  // have interface and some kind of *cast looking address
 		ether_addr_copy( &tcif->mac_addr, &tmp);
 	} else {
 		ether_addr_copy( &eth->d_addr, &tmp);
