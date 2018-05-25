@@ -84,39 +84,43 @@ explanation of the various fields following.
   
     {
        "ds_vlanid":        99,
-   
+    
        "log_level":        2,
        "dpdk_log_level":   3,
        "log_keep":         27,
        "xlog_dir":         "/tmp/gbbler/logs",
        "log_file":         "stderr",
        "init_lldelta":     2,
-   
+    
        "mbufs":            1024,
        "rx_des":           128,
        "tx_des":           128,
        "mtu":              9009,
-   
+    
+       "gen_macs":         true,
+       "mac_whitelist":    [ "04:30:86:02:19:89", 
+                             "04:01:60:02:01:61" ]
+    
        "duprx2tx":         true,
-       "rx_devs":          [ "0000:00:04.0", 
+       "rx_devs":          [ "0000:00:04.0",
                              "0000:00:05.0" ],
-   
-       "tx_devs":          [ 
-                  {  "address": "dup0", 
-                     "vlanids": [ 101, 11, 12 ],   
-                     "macs": [ "76:df:b5:6a:99:0d", 
+    
+       "tx_devs":          [
+                  {  "address": "dup0",
+                     "vlanids": [ 101, 11, 12 ],
+                     "macs": [ "76:df:b5:6a:99:0d",
                                "76:df:b5:6a:99:0e", "" ]
                   },
-                  {  "address": "dup0", 
-                     "vlanids": [ 101, 111, 112 ], 
-                     "macs": [ "76:df:b5:6a:99:0d", 
-                               "76:df:b5:6a:99:0e" ] 
+                  {  "address": "dup0",
+                     "vlanids": [ 101, 111, 112 ],
+                     "macs": [ "76:df:b5:6a:99:0d",
+                               "76:df:b5:6a:99:0e" ]
                   },
        ],
-   
+    
        "xmit_type":        "forward",
        "downstream_mac":   "fa:ce:de:02:00:02",
-   
+    
        "cpu_mask":         "0x1",
        "lock_name":        "gobbler",
        "mem_chans":        4,
@@ -215,6 +219,25 @@ NOT attempt to insert a VLAN ID into any packet on
 transmission. 
  
  
+### Whitelist MAC Addresses 
+Gobbler will genenerate a series of _set mac-vlan_ requests 
+to set one or more MAC addresses in the VF's whitelist. 
+There are two ways of doing this. First, the boolean field 
+_gen_macs_ can be set to true which causes a small set of 
+generated MAC addresses to be added. This is primarly just 
+to test the ability to add MAC lists to the device. 
+ 
+The mac_whitelist array can also be given in the config 
+file. The MAC addresses supplied in this manner are applied 
+to ** all ** of the interfaces defined. The intent of 
+supplying a known list is to allow for testing both the 
+ability to set a white list and to verify that the NIC is 
+behaving properly with respect to allowing and/or denying 
+traffic based on the white list. When the whitelist is 
+given, the value of _gen_macs_ is ignored (treated as 
+false). 
+ 
+ 
 ### Other Parameters 
 The other parameters in the configuration file should be 
 fairly obvious and are briefly described below. 
@@ -249,4 +272,4 @@ on the device(s).
  
  
 ___________________________________________________________
-Formatted on 31 January 2018 using tfm V2.2/0a266 
+Formatted on 25 May 2018 using tfm V2.2/0a266 
