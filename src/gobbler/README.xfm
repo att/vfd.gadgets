@@ -124,6 +124,10 @@ The following illustrates the layout with an explanation of the various fields f
     "tx_des":           128,
     "mtu":              9009,
 
+	"gen_macs":			true,
+	"white_macs":		[ "04:30:86:02:19:89", 
+                          "04:01:60:02:01:61" ]
+
     "duprx2tx":         true,
     "rx_devs":          [ "0000:00:04.0", 
                           "0000:00:05.0" ],
@@ -219,6 +223,15 @@ when there is no array given.
 
 If this value is set to 0, then gobbler assumes that VLAN IDs are being stripped from the packets
 and gobbler will NOT attempt to insert a VLAN ID into any packet on transmission.
+
+&h3(Whitelist MAC Addresses)
+Gobbler will genenerate a series of &ital(set mac-vlan) requests to set one or more MAC addresses
+in the VF's whitelist.  
+The boolean field &ital(gen_macs) must be true for this to happen, and the &ital(white_macs) array 
+can be used to supply a known list of addresses which will be used when the field is true. 
+The array of mac addresses may be omitted when the &ital(gen_macs) field is true, and in that case
+Gobbler will generate a set of sequential MAC addresses starting with ea:ea:ea:ea:ea:00. 
+
 
 &h3(Other Parameters)
 The other parameters in the configuration file should be fairly obvious and are briefly described
