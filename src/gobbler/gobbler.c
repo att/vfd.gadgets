@@ -338,50 +338,34 @@ static inline void flush_full_if( iface_t* iface, uint64_t* txcounter, uint64_t*
 // -------------- specific testing things ----------------------------------------------
 
 /* 
-  Generate a bunch of 'white list' MAC addresses that should be added to the NIC via
-	set macvlan callbacks. If the white list is empty, we'll generate a few random ones
-	otherwise we'll generate the ones in the list.
+	Generate a bunch of 'white list' MAC addresses that should be added to the port 0 NIC via
+	set macvlan callbacks.   This should be called only if the whitelist wasn't supplied.
+	If the whitelist was supplied, those are applied during device initialisation with 
+	the intent of actually testing the values given rather than testing the ability to
+	set them.  For the most part, this is deprecated.
 */
-static void gen_whitelist_macs( struct ether_addr* mlist, int nmacs ) {
+static void gen_whitelist_macs( void ) {
 	struct ether_addr ma;
 	int mai;
 	int mais;
-	char*	s;				// printable mac address
 
+	bleat_printf( 1, "adding random white list MAC addresses" );
+	ma.addr_bytes[0] = 0xea;		// all with the same silly 'base'
+	ma.addr_bytes[1] = 0xea;
+	ma.addr_bytes[2] = 0xea;
+	ma.addr_bytes[3] = 0xea;
+	ma.addr_bytes[4] = 0xea;
+	ma.addr_bytes[5] = 0;
 
-	if( mlist == NULL ) {
-		bleat_printf( 1, "adding random white list MAC addresses" );
-		ma.addr_bytes[0] = 0xea;		// all with the same silly 'base'
-		ma.addr_bytes[1] = 0xea;
-		ma.addr_bytes[2] = 0xea;
-		ma.addr_bytes[3] = 0xea;
-		ma.addr_bytes[4] = 0xea;
-		ma.addr_bytes[5] = 0;
-	
-		for( mai = 0; mai < 7; mai++ ) {
-			if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
-				bleat_printf( 0, "### ERR ### add random whitelist mac fails for %d with error %d", mai, mais );
-				break;
-			} else {
-				bleat_printf( 0, "add random whitelist mac OK for ea:ea:ea:ea:ea:%02x", mai );
-			}
-	
-			ma.addr_bytes[5]++;
+	for( mai = 0; mai < 7; mai++ ) {
+		if( (mais = rte_eth_dev_mac_addr_add( 0, &ma, 0 ) ) < 0 ) {
+			bleat_printf( 0, "### ERR ### add random whitelist mac fails for %d with error %d", mai, mais );
+			break;
+		} else {
+			bleat_printf( 0, "add random whitelist mac OK for ea:ea:ea:ea:ea:%02x", mai );
 		}
-	} else {
-		bleat_printf( 1, "adding %d user supplied white list MAC addresses", nmacs );
-		for( mai = 0; mai < nmacs; mai++ ) {
 
-			if( (mais = rte_eth_dev_mac_addr_add( 0, &mlist[mai], 0 ) ) < 0 ) {
-				bleat_printf( 0, "### ERR ### add whitelist mac fails for %d with error %d", mai, mais );
-				break;
-			} else {
-				s = mac_to_string( &mlist[mai] );
-				bleat_printf( 0, "add whitelist mac OK for %s", s );
-				free( s );
-			}
-		
-		}
+		ma.addr_bytes[5]++;
 	}
 }
 
@@ -678,7 +662,7 @@ int main( int argc, char** argv ) {
 
 
 	if( cfg->flags & CF_GEN_MACS ) {							// generate macs from the white list or random ones
-		gen_whitelist_macs( cfg->white_macs, cfg->nwhite_macs );
+		gen_whitelist_macs( );
 	}
 	
 	if( cfg->sim_id != NULL ) {

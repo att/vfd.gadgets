@@ -212,9 +212,6 @@ typedef struct config {
 	int		xmit_type;
 	int		duprx2tx;				// if true, then we force all rx interfaces into the tx list
 
-	struct ether_addr*	white_macs;	// array of macs to be added to the whitelist (macvlan testing)
-	int		nwhite_macs;			// number of macs in the white list
-
 	int		hw_vlan_strip;			// hardware to strip vlan ID on Rx
 	int		mtu;					// max Rx mtu size (jumbo flag set if >1500, cap is 9420)
 
