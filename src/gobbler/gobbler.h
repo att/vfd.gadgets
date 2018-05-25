@@ -202,6 +202,9 @@ typedef struct config {
 	int		tx_des;	
 	char*	lock_name;				// name used to prevent duplicate procesess (dpdk --file-prefix parm)
 
+	int		nwhitelist;				// number of mac addresses in the white list
+	char**	whitelist;				// mac addresses pushed as aliases to all interfaces
+
 	// these are populated at run time or only from command line
 	int		nports;					// number of ports reported by hardware/dpdk
 	int*	rx_port_map;			// port maps filled in by comparing tx/rx_devs to rte info at runtime
@@ -231,6 +234,8 @@ typedef struct context {
 	int			nrxifs;
 	int			xmit_type;				// type of retransmssion we're doing
 	int			dump_size;
+	int			nwhitelist;				// number of macs in the white list
+	char**		whitelist;				// mac addresses added as whitelist to all ports
 
 	struct rte_mempool* mbuf_pool;		// buffer pool allocated from huge pages
 	//thread_private_t**	thd_data;		// pointers to thread private stuff

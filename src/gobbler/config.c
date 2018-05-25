@@ -299,11 +299,13 @@ static  void* dig_tx_info( void* config ) {
 			pid_fname:		<string>,
 			cpu_mask:		<value|string>,		# can be a string like "0x0a" or just integer like 10
 
-			gen_macs:		<boolean>,			# if true then we generate a few whitelist mac addresses
+			gen_macs:		<boolean>,			# if true then we generate a few 'random' whitelist mac addresses
+												# if whitelist macs are given this is forced to false
 			mem_chans:		<value>,
 			huge_pages:		<boolean>,			# testing only; default is true
 			tot_mem:		<value>,			# total dpdk memory to allocate for the rpocess
 
+			mac_whitelist:	[ <string>... ],	# supplies mac addresses that are added via macvlan request to all devices
 			#---- network interfaces -----------
 			rx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should listen to
 			//deprecated tx_devs:		[ <string>[,...] ]	# one or more device names (PCI addrs) that we should transmit on
@@ -386,11 +388,6 @@ extern config_t* read_config( char const* fname ) {
 			}
 		}
 
-		if( get_bool( jblob, "gen_macs", FALSE ) == FALSE ) {
-			config->flags &= ~CF_GEN_MACS;
-		} else {
-			config->flags |= CF_GEN_MACS;
-		}
 
 		if( get_bool( jblob, "huge_pages", TRUE ) == FALSE ) {
 			config->flags &= ~CF_HUGE_PAGES;
@@ -452,10 +449,27 @@ extern config_t* read_config( char const* fname ) {
 				config->tx_ports[i] = -1;
 			}
 		}
-/*
-		if( config->ntx_devs > 0 ) {
+
+		// --- dig out the mac white list ------------------
+		if( (config->nwhitelist = jw_array_len( jblob, "mac_whitelist" )) > 0 ) {
+			if( (config->whitelist = (char **) malloc( sizeof( char * ) * config->nwhitelist )) != NULL ) {
+				memset( config->whitelist, 0, sizeof( char * ) * config->nwhitelist );
+				for( i = 0; i < config->nwhitelist; i++ ) {
+					if( (cp = jw_string_ele( jblob, "mac_whitelist", i )) != NULL ) {
+						config->whitelist[i] = strdup( cp );
+					}
+				}
+			}
+
+			config->flags &= ~CF_GEN_MACS;		// force the gen flag to false as it would stomp on the white list
+		} else {
+			if( get_bool( jblob, "gen_macs", FALSE ) == FALSE ) {			// no white list, we can add random ones if this is true
+				config->flags &= ~CF_GEN_MACS;
+			} else {
+				config->flags |= CF_GEN_MACS;
+			}
 		}
-*/
+		
 
 		jw_nuke( jblob );
 	} else {
