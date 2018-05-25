@@ -36,6 +36,36 @@
 
 #define ARGV_LEN	64 			// this should be enough for the dummy argv built for eal init
 
+
+/*
+	This will write all of the mac addresses in the list to the given nic.
+
+	NOTE:  we cannot really check to see if we've already pushed a list
+		to a port which shares the same PF as another port. Because 
+		duplicate MAC addresses aren't allowd on the same PF, a second
+		push will fail.  Allowing the second push allows for testing the
+		control function (e.g. VFd) to ensure it's recognising duplicates
+		and doing the right thing. 
+*/
+static void push_whitelist_macs( int device, int nmacs, char** macs ) {
+	struct ether_addr ma;
+	int mai;		// index
+	int state;
+
+	bleat_printf( 1, "hacking in mac addresses" );
+
+	for( mai = 0; mai < nmacs; mai++ ) {
+		if( macs[mai] ) {
+			macstr2buf( (unsigned char *) macs[mai], (unsigned char *) &ma );								// convert human string to raw bytes
+			if( (state = rte_eth_dev_mac_addr_add( device, &ma, 0 ) ) < 0 ) {
+				bleat_printf( 0, "WRN: whitelist mac add failed for: %s state=%d", macs[mai], state );
+			} else {
+				bleat_printf( 0, "whitelist mac added: %s", macs[mai] );
+			}
+		}
+	}
+}
+
 /*
 	Test function to vet parms that will be passed on eal init call.
 */
@@ -360,6 +390,9 @@ extern context_t* mk_context( config_t* cfg ) {
 	nc->ntxifs = cfg->ntx_devs;
 	nc->dump_size = cfg->dump_size;
 
+	nc->nwhitelist = cfg->nwhitelist;
+	nc->whitelist = cfg->whitelist;
+
 	if( (nc->xmit_type = cfg->xmit_type) == SEND_DOWNSTREAM ) {				// set based on user option but we may override later if no tx devs given
 		if( cfg->ds_vlanid > 0 ) {
 			nc->xmit_type = SEND_DOWNSTREAM_VLAN;
@@ -595,6 +628,10 @@ static int start_one_iface( context_t* ctx, iface_t* iface ) {
 				}
 			}
 		}
+	}
+
+	if( ctx->nwhitelist > 0 ) {				// white list supplied, push it to the device
+		push_whitelist_macs( iface->portid, ctx->nwhitelist, ctx->whitelist );
 	}
 
 	iface->flags |= IFFL_RUNNING;			// succesfully started; can be stopped at shutdown/signal
