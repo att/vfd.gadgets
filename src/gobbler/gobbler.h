@@ -224,6 +224,8 @@ typedef struct config {
 	char*	sim_id;					// id for a simulation
 	int		nwhitelist;				// number of mac addresses in the white list
 	char**	whitelist;				// mac addresses pushed as aliases to all interfaces
+	int		ndefault_macs;			// number of default mac addresses
+	char**	default_macs;			// default mac addresses
 	
 	// these are populated at run time or only from command line
 	int		nports;					// number of ports reported by hardware/dpdk
@@ -256,6 +258,8 @@ typedef struct context {
 	int			dump_size;
 	int			nwhitelist;				// number of macs in the white list
 	char**		whitelist;				// mac addresses added as whitelist to all ports
+	int			ndefault_macs;			// number of default mac addresses to configure
+	char**		default_macs;			// mac addresses to apply to each port (in order, no repeat)
 
 	struct rte_mempool* mbuf_pool;		// buffer pool allocated from huge pages
 	//thread_private_t**	thd_data;		// pointers to thread private stuff
