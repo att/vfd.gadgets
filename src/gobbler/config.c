@@ -300,14 +300,14 @@ static  void* dig_tx_info( void* config ) {
 			cpu_mask:		<value|string>,		# can be a string like "0x0a" or just integer like 10
 
 
-			gen_macs:		<boolean>,			# if true then we generate a few whitelist mac addresses
-												# if whitelist macs are given this is forced to false
+			default_macs:	[ <string>...],		# each mac is applied to ports, in order, until exhausted. (if two ports, but one address, only the first is given a default)
+			gen_macs:		<boolean>,			# if true then we generate a few, hard coded,  whitelist mac addresses;  if whitelist macs are given this is forced to false
+			mac_whitelist:	[ <string>... ],	# supplies mac addresses that are added via macvlan request to all devices ("on top" of the default MAC)
 
 			mem_chans:		<value>,
 			huge_pages:		<boolean>,			# testing only; default is true
 			tot_mem:		<value>,			# total dpdk memory to allocate for the rpocess
 
-			mac_whitelist:	[ <string>... ],	# supplies mac addresses that are added via macvlan request to all devices
 
 			#---- network interfaces -----------
 			rx_devs:		[ <string>[,...] ]				# one or more device names (PCI addrs) that we should listen to
@@ -426,10 +426,6 @@ extern config_t* read_config( char const* fname ) {
 		}
 
 		config->nrx_devs = dig_string_array( jblob, "rx_devs", &config->rx_devs );					//  list of tx/rx devices
-		//if( (config->ntx_devs = dig_string_array( jblob, "tx_devs", &config->tx_devs )) < 0 ) {		// not defined, so it will be -1; we need it to be 0
-			//config->ntx_devs = 0;
-		//}
-		
 
 		if( config->nrx_devs > 0 ) {
 			config->rx_ports = (int *) malloc( sizeof( int ) * config->nrx_devs );				// must do last as we depend on number of things in arrays
@@ -450,6 +446,18 @@ extern config_t* read_config( char const* fname ) {
 			config->tx_ports = (int *) malloc( sizeof( int ) * config->ntx_devs );
 			for( i = 0; i < config->ntx_devs; i++ ) {
 				config->tx_ports[i] = -1;
+			}
+		}
+
+		// dig out the list of default mac addresses
+		if( (config->ndefault_macs = jw_array_len( jblob, "default_macs" )) > 0 ) {
+			if( (config->default_macs = (char **) malloc( sizeof( char * ) * config->ndefault_macs )) != NULL ) {
+				memset( config->default_macs, 0, sizeof( char * ) * config->ndefault_macs );
+				for( i = 0; i < config->ndefault_macs; i++ ) {
+					if( (cp = jw_string_ele( jblob, "default_macs", i )) != NULL ) {
+						config->default_macs[i] = strdup( cp );
+					}
+				}
 			}
 		}
 

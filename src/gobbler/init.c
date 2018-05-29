@@ -52,7 +52,7 @@ static void push_whitelist_macs( int device, int nmacs, char** macs ) {
 	int mai;		// index
 	int state;
 
-	bleat_printf( 1, "hacking in mac addresses" );
+	bleat_printf( 1, "hacking in %d mac addresses", nmacs );
 
 	for( mai = 0; mai < nmacs; mai++ ) {
 		if( macs[mai] ) {
@@ -62,6 +62,32 @@ static void push_whitelist_macs( int device, int nmacs, char** macs ) {
 			} else {
 				bleat_printf( 0, "whitelist mac added: %s", macs[mai] );
 			}
+		}
+	}
+}
+
+/*
+	Push the default mac at idx in the macs list. This assumes vetting that idx is in 
+	range has already been done.
+*/
+static void push_default_mac( int device, char** macs, int idx ) {
+	struct ether_addr ma;
+	int state;
+
+	if( ! macs ) {
+		return;				// take no chances
+	}
+
+	if( macs[idx] ) {
+		macstr2buf( (unsigned char *) macs[idx], (unsigned char *) &ma );								// convert human string to raw bytes
+		if( (state = rte_eth_dev_default_mac_addr_set( device, &ma ) ) < 0 ) {
+			if( state == -EADDRINUSE ) {
+				bleat_printf( 0, "default mac add failed for: %s state=addr-in-use", macs[idx] );		// likely not an issue, so no warning
+			} else {
+				bleat_printf( 0, "WRN: default mac add failed for: %s state=%d", macs[idx], state );
+			}
+		} else {
+			bleat_printf( 0, "default mac successfully added: port %d: %s", device, macs[idx] );
 		}
 	}
 }
@@ -390,8 +416,13 @@ extern context_t* mk_context( config_t* cfg ) {
 	nc->ntxifs = cfg->ntx_devs;
 	nc->dump_size = cfg->dump_size;
 
-	nc->nwhitelist = cfg->nwhitelist;
+	nc->nwhitelist = cfg->nwhitelist;				// capture whitelist and default macs; set pointers to nil in config to prevent accidental free
 	nc->whitelist = cfg->whitelist;
+	cfg->whitelist = NULL;
+
+	nc->ndefault_macs = cfg->ndefault_macs;
+	nc->default_macs = cfg->default_macs;
+	cfg->default_macs = NULL;
 
 	if( (nc->xmit_type = cfg->xmit_type) == SEND_DOWNSTREAM ) {				// set based on user option but we may override later if no tx devs given
 		if( cfg->ds_vlanid > 0 ) {
@@ -530,8 +561,10 @@ extern context_t* mk_context( config_t* cfg ) {
 	the port is up to finally do:
 		- insert the mac into the tx mac list if there is a
 			00:00...:00 entry
+
+	iidx is the index that we'll use for setting the default mac.
 */
-static int start_one_iface( context_t* ctx, iface_t* iface ) {
+static int start_one_iface( context_t* ctx, iface_t* iface, int iidx ) {
 	int i;
 	int j;
 	int state;
@@ -605,6 +638,11 @@ static int start_one_iface( context_t* ctx, iface_t* iface ) {
 		rte_eth_promiscuous_disable( iface->portid );
 	}
 
+	if( ctx->ndefault_macs > 0 && iidx < ctx->ndefault_macs ) {			// set the default port, if needed and can, before we fetch it back for log
+		push_default_mac( iface->portid, ctx->default_macs, iidx );
+	}
+
+	memset( &iface->mac_addr, 0, sizeof( iface->mac_addr ) );
 	rte_eth_macaddr_get( iface->portid, &iface->mac_addr );			// get such that dpdk header functions/macros have known quantity
 	iface->mac = get_mac_string( iface->portid );					// and a nice human readable form for logs
 	bleat_printf( 1, "port %d mac: %s", iface->portid, iface->mac );
@@ -646,6 +684,7 @@ static int start_one_iface( context_t* ctx, iface_t* iface ) {
 */
 extern int start_ifaces( context_t* ctx ) {
 	int i;
+	int iidx = 0;
 
 	if( ctx == NULL ) {
 		bleat_printf( 0, "CRI: start_ifaces: nil context pointer" );
@@ -653,7 +692,7 @@ extern int start_ifaces( context_t* ctx ) {
 	}
 	
 	for( i = 0; i < ctx->nrxifs; i++ ) {
-		if( ! start_one_iface( ctx, ctx->rx_ifs[i] ) ) {
+		if( ! start_one_iface( ctx, ctx->rx_ifs[i], iidx++ ) ) {
 			bleat_printf( 0, "CRI: start_ifaces: start rx interface %d failed" );
 			return 0;
 		}
@@ -662,7 +701,7 @@ extern int start_ifaces( context_t* ctx ) {
 
 	if( ! (ctx->flags & CTF_TX_DUP) ) {
 		for( i = 0; i < ctx->ntxifs; i++ ) {
-			if( ! start_one_iface( ctx, ctx->tx_ifs[i] ) ) {
+			if( ! start_one_iface( ctx, ctx->tx_ifs[i], iidx++ ) ) {
 				bleat_printf( 0, "CRI: start_ifaces: start tx interface %d failed" );
 				return 0;
 			}
