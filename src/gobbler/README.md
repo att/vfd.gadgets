@@ -97,6 +97,8 @@ explanation of the various fields following.
        "tx_des":           128,
        "mtu":              9009,
     
+       "default_macs":		[ "fa:ce:ed:09:00:05", 
+                             "fa:ce:ed:09:01:01" ],
        "gen_macs":         true,
        "mac_whitelist":    [ "04:30:86:02:19:89", 
                              "04:01:60:02:01:61" ]
@@ -219,6 +221,21 @@ NOT attempt to insert a VLAN ID into any packet on
 transmission. 
  
  
+### Default MAC Addresses 
+The array of default MAC addresses is applied, in order, to 
+each of the interfaces. Unlike the the white list of MAC 
+addresses (below) the address pushed to a device as the 
+default will persist over Gobbler restarts. If there are 
+fewer MAC addresses in this array, then the interfaces 
+which are initialised after all have been assigned will not 
+have a default MAC assigned. MAC addresses may be 
+duplicated for interfaces which reside on different PFs; 
+attempting to use the same MAC address on the same PF will 
+result in an error. If the array is omitted from the 
+configuration file, no defaults are assigned. 
+ 
+ 
+ 
 ### Whitelist MAC Addresses 
 Gobbler will genenerate a series of _set mac-vlan_ requests 
 to set one or more MAC addresses in the VF's whitelist. 
@@ -272,4 +289,4 @@ on the device(s).
  
  
 ___________________________________________________________
-Formatted on 25 May 2018 using tfm V2.2/0a266 
+Formatted on 29 May 2018 using tfm V2.2/0a266 
