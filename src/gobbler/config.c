@@ -369,7 +369,7 @@ extern config_t* read_config( char const* fname ) {
 		config->log_dir = get_str( jblob, "log_dir", "/var/log/switchboard" );
 		config->lock_name= get_str( jblob, "lock_name", "anolis" );
 
-		config->ds_vlanid = (int) get_value( jblob, "ds_vlanid", 0 );				// our internal bleat level
+		config->ds_vlanid = (int) get_value( jblob, "ds_vlanid", 0 );
 
 		config->downstream_mac = get_str( jblob, "downstream_mac", NULL );			// downstream mac to foward packets to
 		config->mtu = get_value( jblob, "mtu", 1500 );								// mtu max for Rx; if >1500 jumbo is automatically enabled
