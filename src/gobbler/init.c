@@ -5,6 +5,10 @@
 				here.
 	Author:		E. Scott Daniels
 	Date:		1 February 2017
+
+	Mods:		30 May 2018 - Ensure send downstream sets vlan flag if vlans are supplied as
+					a part of the tx definition, or the downstream vlan id is given in the
+					config.
 */
 
 
@@ -484,6 +488,9 @@ extern context_t* mk_context( config_t* cfg ) {
 			}
 
 			nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured
+			if( nc->xmit_type == SEND_DOWNSTREAM ) {
+				nc->xmit_type = SEND_DOWNSTREAM_VLAN;
+			}
 		}
 		bleat_printf( 1, "all tx interfaces successfully created" );
 	} else {
@@ -492,6 +499,9 @@ extern context_t* mk_context( config_t* cfg ) {
 				nc->tx_ifs[i] = nc->rx_ifs[i];
 				if( cfg->vlans ) {
 					nc->tx_ifs[i]->vset = cfg->vlans[i];			// give the vlan set configured; we ignore the address
+					if( nc->xmit_type == SEND_DOWNSTREAM ) {
+						nc->xmit_type = SEND_DOWNSTREAM_VLAN;
+					}
 				} 
 				if( cfg->macs ) {
 					nc->tx_ifs[i]->mset = cfg->macs[i];				// give the mac set configured
@@ -621,6 +631,17 @@ static int start_one_iface( context_t* ctx, iface_t* iface, int iidx ) {
 		if( state < 0 ) {
 			bleat_printf( 0, "start_one: unable to initialise tx error callback for port %d state=%d (%s)", iface->portid, state, strerror( -state ) );
 			return 0;
+		}
+
+		/*
+		state = rte_eth_dev_set_vlan_offload( iface->portid, ETH_VLAN_STRIP_OFFLOAD | ETH_VLAN_FILTER_OFFLOAD | ETH_VLAN_EXTEND_OFFLOAD );
+		if( state < 0 ) {
+			bleat_printf( 0, "start_one: unable to set vlan off load port=%d state=%d (%s)", iface->portid, state, strerror( -state ) );
+		}
+		*/
+		state = rte_eth_dev_get_vlan_offload( iface->portid );
+		if( (state & ETH_VLAN_EXTEND_OFFLOAD) == 0 ) {
+			bleat_printf( 0, "WRN: port=%d vlan extend offload is not enable for the port (might need -e option on command line to insert vlan id)", iface->portid );
 		}
 	}
 	bleat_printf( 3, "started %d transmit queues for port %d", iface->ntxq, iface->portid );
