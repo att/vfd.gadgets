@@ -209,23 +209,28 @@ static inline void insert_vlan( struct ether_hdr* eth_hdr, uint16_t vlan  ) {
 static inline void push_mac_vlan( struct rte_mbuf *mb, struct ether_addr const* dst_addr, struct ether_addr const* src_addr, uint16_t vlan  ) {
 	struct ether_hdr *eth;									// ethernet header in the mbuf
 
-
 	eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );						// @header 
-	if( (mb->ol_flags & PKT_RX_VLAN_STRIPPED) && (mb->vlan_tci == 0) ) {	// if tci is 0, the vlan wasn't removed from the buffer even if strip flag is true
-		insert_vlan( eth, vlan );											// so we can just put desired value into the packet as is
-	} else {
-		mb->ol_flags = PKT_TX_IPV4 |  PKT_TX_IP_CKSUM |  PKT_TX_VLAN;		// packet is VLAN and tci should be added by hardware
-		mb->vlan_tci = vlan;
 
-		if( expand_pkt_for_vlan ) {				// no hardware support, pop on additional space out front and add ourselves
-			rte_pktmbuf_prepend( mb, 4 );
-			eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );					// @header (this is a bleeding macro; why is it not caps? DPDK fail)
-			insert_vlan( eth, vlan );
+	if( vlan > 0 ) {															// don't insert if 0
+		if( (mb->ol_flags & PKT_RX_VLAN_STRIPPED) && (mb->vlan_tci == 0) ) {	// if tci is 0, the vlan wasn't removed from the buffer even if strip flag is true
+			insert_vlan( eth, vlan );											// so we can just put desired value into the packet as is
+			mb->ol_flags = PKT_TX_VLAN_PKT | PKT_TX_IP_CKSUM;
+		} else {
+			//mb->ol_flags = PKT_TX_IPV4 |  PKT_TX_IP_CKSUM |  PKT_TX_VLAN | PKT_TX_IP_CKSUM;		// packet is VLAN and tci should be added by hardware
+			mb->ol_flags = PKT_TX_VLAN_PKT;
+			mb->vlan_tci = vlan;
+
+			if( expand_pkt_for_vlan ) {											// no hardware support, pop on additional space out front and add ourselves
+				rte_pktmbuf_prepend( mb, 4 );
+				eth = rte_pktmbuf_mtod( mb, struct ether_hdr * );				// adjust header pointer to account for padding we added
+				insert_vlan( eth, vlan );
+			}
 		}
 	}
 
 	ether_addr_copy( dst_addr, &eth->d_addr);
 	ether_addr_copy( src_addr, &eth->s_addr);
+
 }
 
 /*
@@ -512,9 +517,7 @@ static int gobble( void* vctx ) {
 
 					case SEND_DOWNSTREAM_VLAN:				// set if ds_vlan is > 0 in config; insert vlan then
 						for( i = 0; i < npkts; i++ ) {
-							//push_mac_vlan( pkts[i], &ctx->downstream_mac, &tcif->mac_addr, ctx->ds_vlanid  );	// set addresses and vlan
-
-							// set the src mac and the vlan; get_mac/vlan() rotates through the list given in the config
+							// set the src mac and the vlan; get_mac/vlan() rotates through the list given in the config or uses the ds_vlanid as the default
 							push_mac_vlan( pkts[i], &ctx->downstream_mac, get_mac( tcif->mset, &tcif->mac_addr ), get_vlan( tcif->vset, ctx->ds_vlanid )  );
 
 							if( (state = rte_eth_tx_buffer( tcif->portid, 0, tcif->tx_bufs[0], pkts[i] )) >= 0 ) {
@@ -523,7 +526,7 @@ static int gobble( void* vctx ) {
 								tcif->bwrites++;						// bwrites isn't accurate if tx_buffer forced a flush as we never know drops
 
 								if( unlikely( ctx->dump_size ) ) {
-									bleat_printf( 1, "FWDv: if=%d pkt %d of %d len=%d first %d bytes", j, i, npkts, rte_pktmbuf_pkt_len( pkts[i] ), ctx->dump_size );
+									bleat_printf( 1, "FWDv: if=%d tci=%d ol_flags=0x%08lx first %d bytes", j, pkts[i]->vlan_tci, pkts[i]->ol_flags, ctx->dump_size );
 									dump_octs( rte_pktmbuf_mtod( pkts[i], unsigned const char*), ctx->dump_size > 1 ? (int) ctx->dump_size : (int)  rte_pktmbuf_pkt_len( pkts[i] ) );
 								}
 							} else {
