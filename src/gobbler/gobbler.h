@@ -75,28 +75,17 @@
 
 static const struct rte_eth_conf default_port_conf = {
 	.rxmode = {
-		// these bit fields are replaced by offload flags below
-		/*
-		.header_split   = 0, 		// Header Split disabled
-		.hw_ip_checksum = 0, 		// IP checksum offload disabled
-		.hw_vlan_filter = 0, 		// VLAN filtering disabled
-		.hw_vlan_strip = 1, 		// VLAN stripping enabled
-		.jumbo_frame    = 0, 		// disabled; can be changed in mk_iface()
-		.hw_strip_crc   = 1, 		// CRC stripped by hardware
-		*/
-
-		.ignore_offload_bitfield = 1,	// force the PMD to use offload rather than bitfields
-
 		.split_hdr_size = 0,
 		.max_rx_pkt_len	= ETHER_MAX_LEN,		// can be overridden by mk_iface()
 		//.mq_mode = ETH_MQ_RX_VMDQ_ONLY,
 
-		//.offloads = (DEV_RX_OFFLOAD_CRC_STRIP | DEV_RX_OFFLOAD_VLAN_STRIP | DEV_RX_OFFLOAD_CHECKSUM | DEV_RX_OFFLOAD_VLAN_EXTEND),
-		.offloads = (DEV_RX_OFFLOAD_CRC_STRIP | DEV_RX_OFFLOAD_VLAN_STRIP | DEV_RX_OFFLOAD_CHECKSUM ),
+		.ignore_offload_bitfield = 1,			// transition setting that causes the PMD to use offloads
+		.offloads = (DEV_RX_OFFLOAD_CRC_STRIP | DEV_RX_OFFLOAD_CHECKSUM ),
+		// DEV_RX_OFFLOAD_VLAN_STRIP  DEV_RX_OFFLOAD_VLAN_EXTEND are added during init if hw_strip is set in the config file
 	},
 	.txmode = {
 		.mq_mode = ETH_MQ_TX_NONE,
-		.offloads = ( DEV_TX_OFFLOAD_VLAN_INSERT ),
+		// vlan insert set in offloads at init time if configured
 	},
 };
 

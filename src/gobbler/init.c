@@ -375,7 +375,13 @@ static iface_t* mk_iface( int portid, int rxdes, int txdes, int hw_vlan_filter, 
 	nif->addr = addr;
 
 	nif->pconf = default_port_conf;						// pick up the defaults and allow some overrides
-	nif->pconf.rxmode.hw_vlan_filter = hw_vlan_filter;
+
+	if( hw_vlan_filter ) {
+		//nif->pconf.rxmode.hw_vlan_filter = hw_vlan_filter;	// deprecated in modern DPDKs
+		nif->pconf.rxmode.offloads |= DEV_RX_OFFLOAD_VLAN_STRIP | DEV_RX_OFFLOAD_VLAN_EXTEND;
+		nif->pconf.txmode.offloads |= DEV_TX_OFFLOAD_VLAN_INSERT;
+	}
+
 	if( mtu > 1500 ) {
 		nif->pconf.rxmode.jumbo_frame = 1;
 		nif->pconf.rxmode.max_rx_pkt_len = mtu > 9420 ? 9420 : mtu;		// enforce sanity
