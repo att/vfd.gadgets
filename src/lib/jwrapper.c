@@ -11,6 +11,7 @@
 				13 Jun 2016 : Added more granularity to sussing out primative types
 								allowing the caller to determine whether the primative 
 								is a bool, value, or null.
+				24 Jul 2018 : Change values to doubles rather than floats.
 */
 
 #include <stdio.h>
@@ -34,7 +35,7 @@ extern void jw_nuke( void* st );
 
 /*
 	This is what we will manage in the symtab. Right now we store all values (primatives)
-	as float, but we could be smarter about it and look for a decimal. Unsigned and 
+	as double, but we could be smarter about it and look for a decimal. Unsigned and 
 	differences between long, long long etc are tough.
 */
 typedef struct jthing {
@@ -42,7 +43,7 @@ typedef struct jthing {
 	int prim_type;				// finer grained primative type (bool, null, value)
 	int	nele;					// number of elements if applies
 	union {
-		float fv;
+		double fv;
 		void *pv;
 	} v;
 } jthing_t;
@@ -339,7 +340,7 @@ void* parse_jobject( void* st, char *json, char* prefix ) {
 
 								default:
 									jarray[n].prim_type	 = PT_VALUE;
-									jarray[n].v.fv = strtof( data, NULL ); 		// store all numerics as float
+									jarray[n].v.fv = strtod( data, NULL ); 		// store all numerics as double
 									break;
 							}
 
@@ -402,7 +403,7 @@ void* parse_jobject( void* st, char *json, char* prefix ) {
 
 					default:
 						jtp->prim_type = PT_VALUE;
-						jtp->v.fv = strtof( data, NULL ); 		// store all numerics as float
+						jtp->v.fv = strtod( data, NULL ); 		// store all numerics as double
 						break;
 				}
 				break;
@@ -470,7 +471,7 @@ extern int jw_exists( void* st, const char* name ) {
 }
 
 /*
-	Returns true (1) if the primative type is value (float).
+	Returns true (1) if the primative type is value (double).
 */
 extern int jw_is_value( void* st, const char* name ) {
 	jthing_t* jtp;									// thing that is referenced by the symtab
@@ -552,7 +553,7 @@ extern char* jw_string( void* st, const char* name ) {
 /*
 	Look up name and return the value.
 */
-extern float jw_value( void* st, const char* name ) {
+extern double jw_value( void* st, const char* name ) {
 	jthing_t* jtp;									// thing that is referenced by the symtab
 
 	if( st == NULL ) {
@@ -627,7 +628,7 @@ extern char* jw_string_ele( void* st, const char* name, int idx ) {
 		index is out of range
 		element is not a value
 */
-extern float jw_value_ele( void* st, const char* name, int idx ) {
+extern double jw_value_ele( void* st, const char* name, int idx ) {
 	jthing_t* jtp;									// thing that is referenced by the symtab entry
 
 	if( st == NULL ) {

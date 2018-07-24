@@ -38,6 +38,7 @@ char* raw_json = "{ \
 		{ \"relative\": \"daugher\", \"age\": 10, \"name\": \"Pebbles\", \"blood\": true, },\
 		{ \"relative\": \"mother\", \"age\": 70, \"name\": \"Gertrude\", \"blood\": true, }\
 	],\
+	\"large_value\": 1695459520,\
 	\"last_blood\": [ \"acceptable\", 192.1, 45.0, true, false, null, \"full pannel\" ]\
 }";
 
@@ -104,8 +105,8 @@ static int check_ele_types( void* jblob ) {
 	Check the type in the blob for boolean. Expect is 1 if we expect it to 
 	be bool, and 0 if we expect it to not be bool. Returns the error count.
 */
-static int check_type_bool( void* jblob, char* field, float expect ) {
-	float	value;
+static int check_type_bool( void* jblob, char* field, double expect ) {
+	double	value;
 	int		ec = 0;
 	int		is_bool;
 
@@ -133,8 +134,8 @@ static int check_type_bool( void* jblob, char* field, float expect ) {
 	Check the type in the blob for value. Expect is 1 if we expect it to 
 	be a value, and 0 if we expect it to not be a value. Returns the error count.
 */
-static int check_type_value( void* jblob, char* field, float expect ) {
-	float	value;
+static int check_type_value( void* jblob, char* field, double expect ) {
+	double	value;
 	int		ec = 0;
 	int		is_value;
 
@@ -158,8 +159,8 @@ static int check_type_value( void* jblob, char* field, float expect ) {
 	return 0;			// not expected to be and didn't report as a value
 }
 
-static int check_value( void* jblob, char* field, float expect ) {
-	float	value;
+static int check_value( void* jblob, char* field, double expect ) {
+	double	value;
 
 	if(  (value = jw_value( jblob, field )) ) {
 		fprintf( stderr, "found %s:  %0.2f\n", field, value );
@@ -180,7 +181,7 @@ int main( int argc, char **argv ) {
 	void*	jblob;						// parsed json stuff
 	void*	sub_blob;					// nested object
 	char	*stuff;
-	float	value;
+	double	value;
 	int		errors = 0;
 
 	if( (jblob = jw_new( raw_json )) == NULL ) {
@@ -230,6 +231,8 @@ int main( int argc, char **argv ) {
 	errors += check_type_value( jblob, "last_visit", 0 );				// shouldn't report value
 	errors += check_type_value( jblob, "active_patient", 0 );			// shouldn't report value
 	errors += check_type_value( jblob, "patient_id", 1 );				// should report value
+
+	errors += check_value( jblob, "large_value", 1695459520 );
 
 	errors += check_ele_types( jblob );
 

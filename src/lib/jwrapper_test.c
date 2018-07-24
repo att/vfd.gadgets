@@ -122,7 +122,7 @@ static char* file_into_buf( char* fname, uid_t* uid ) {
 int main( int argc, char **argv ) {
 	void    *jblob;					 // parsed json stuff
 	char    *stuff;
-	float   value;
+	double   value;
     char*   buf;
 
 	if( argc <= 2 ) {
