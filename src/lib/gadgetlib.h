@@ -56,8 +56,8 @@ extern void jw_nuke( void* st );
 extern void* jw_obj_ele( void* st, const char* name, int idx );
 extern char* jw_string( void* st, const char* name );
 extern char* jw_string_ele( void* st, const char* name, int idx );
-extern float jw_value( void* st, const char* name );
-extern float jw_value_ele( void* st, const char* name, int idx );
+extern double jw_value( void* st, const char* name );
+extern double jw_value_ele( void* st, const char* name, int idx );
 
 //------------------ ng_flowmgr --------------------------------------------------------------------------
 void ng_flow_close( void *vf );
